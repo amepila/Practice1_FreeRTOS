@@ -13,6 +13,7 @@
 #include "fsl_gpio.h"
 #include "LCDNokia5110.h"
 
+#define DEBUG	(0)
 
 static const uint8_t ASCII[][5] =
 {
@@ -116,6 +117,33 @@ static const uint8_t ASCII[][5] =
 
 
 void LCDNokia_init(void) {
+
+	gpio_pin_config_t pinControlRegister = {kGPIO_DigitalOutput, 1};
+
+	port_pin_config_t pinConfig;
+	pinConfig.mux = kPORT_MuxAsGpio;
+
+	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
+	GPIOD->PDDR |= (1<<DATA_OR_CMD_PIN);
+	PORT_SetPinConfig(PORTD, DATA_OR_CMD_PIN, &pinConfig);
+
+	GPIO_PinInit(GPIOD, RESET_PIN, &pinControlRegister);
+	GPIOD->PDDR |= (1<<RESET_PIN);
+	PORT_SetPinConfig(PORTD, RESET_PIN, &pinConfig);
+
+	GPIO_PortClear(GPIOD, 1<<RESET_PIN);
+	LCD_delay();
+	GPIO_SetPinsOutput(GPIOD, 1<<RESET_PIN);
+	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
+	LCDNokia_writeByte(LCD_CMD, 0xBF); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
+	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
+	LCDNokia_writeByte(LCD_CMD, 0x14); //LCD bias mode 1:48: Try 0x13 or 0x14
+
+	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
+	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
+
+#if DEBUG
+
 	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
 
 	GPIO_clockGating(GPIOD);
@@ -127,7 +155,6 @@ void LCDNokia_init(void) {
 	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);
   //Configure control pins
 
-
 	GPIO_clearPIN(GPIOD, RESET_PIN);
 	LCD_delay();
 	GPIO_setPIN(GPIOD, RESET_PIN);
@@ -138,22 +165,40 @@ void LCDNokia_init(void) {
 
 	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
 	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
+#endif
+
 }
 
 void LCDNokia_bitmap(const uint8_t* my_array){
-	uint16_t index=0;
-  for (index = 0 ; index < (LCD_X * LCD_Y / 8) ; index++)
-	  LCDNokia_writeByte(LCD_DATA, *(my_array+index));
+
+	uint16_t index = 0;
+
+	for (index = 0 ; index < (LCD_X * LCD_Y / 8) ; index++)
+	{
+		LCDNokia_writeByte(LCD_DATA, *(my_array + index));
+
+	}
 }
-
-
 
 void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 {
+	dspi_transfer_t dataSPI;
+	dataSPI.dataSize = 1;
+
 	if(DataOrCmd)
-		GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
+	{
+		GPIO_SetPinsOutput(GPIOD, 1<<DATA_OR_CMD_PIN);
+		//GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
+	}
 	else
-		GPIO_clearPIN(GPIOD, DATA_OR_CMD_PIN);
+	{
+		GPIO_PortClear(GPIOD, 1<<DATA_OR_CMD_PIN);
+		//GPIO_clearPIN(GPIOD, DATA_OR_CMD_PIN);
+	}
+
+	DSPI_StartTransfer(SPI0);
+	DSPI_MasterWriteData(SPI0, );
+	DSPI_StopTransfer(SPI0);
 
 	SPI_startTranference(SPI_0);
 	SPI_sendOneByte(data);
