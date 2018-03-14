@@ -38,7 +38,12 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "MK64F12.h"
+#include "LCDNokia5110.h"
 
+#define TEST		(1)
+#define CODE_SPI 	(0)
+#define CODE_UART0	(1)
+#define CODE_UART1	(0)
 
 int main(void) {
 
@@ -49,8 +54,29 @@ int main(void) {
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
 
+#if (TEST & CODE_SPI)
+
+    dspi_master_config_t masterConfig;
+
+    DSPI_MasterGetDefaultConfig(&masterConfig);
+    DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
+
+    LCDNokia_init();
+    LCDNokia_clear();
+
+#endif
+
+#if	(TEST & CODE_UART0)
+
+#endif
+
+#if	(TEST & CODE_UART1)
+
+#endif
     for(;;)
     {
+    	LCDNokia_printValue(5);
+
 
     }
     return 0 ;

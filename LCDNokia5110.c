@@ -13,7 +13,7 @@
 #include "fsl_gpio.h"
 #include "LCDNokia5110.h"
 
-#define DEBUG	(0)
+#define TEST	(0)
 
 static const uint8_t ASCII[][5] =
 {
@@ -120,8 +120,15 @@ void LCDNokia_init(void) {
 
 	gpio_pin_config_t pinControlRegister = {kGPIO_DigitalOutput, 1};
 
-	port_pin_config_t pinConfig;
-	pinConfig.mux = kPORT_MuxAsGpio;
+	CLOCK_EnableClock(kCLOCK_PortD);
+	CLOCK_EnableClock(kCLOCK_Spi0);
+
+	port_pin_config_t pinConfig =
+	{
+			kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
+			kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAsGpio,
+			kPORT_UnlockRegister
+	};
 
 	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
 	GPIOD->PDDR |= (1<<DATA_OR_CMD_PIN);
@@ -142,7 +149,7 @@ void LCDNokia_init(void) {
 	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
 	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
 
-#if DEBUG
+#if TEST
 
 	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
 
@@ -182,9 +189,6 @@ void LCDNokia_bitmap(const uint8_t* my_array){
 
 void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 {
-	dspi_transfer_t dataSPI;
-	dataSPI.dataSize = 1;
-
 	if(DataOrCmd)
 	{
 		GPIO_SetPinsOutput(GPIOD, 1<<DATA_OR_CMD_PIN);
@@ -197,15 +201,20 @@ void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 	}
 
 	DSPI_StartTransfer(SPI0);
-	DSPI_MasterWriteData(SPI0, );
+	//DSPI_MasterWriteDataBlocking();
+	DSPI_MasterWriteCommandDataBlocking(SPI0,(uint32_t)data);
 	DSPI_StopTransfer(SPI0);
 
+#if TEST
 	SPI_startTranference(SPI_0);
 	SPI_sendOneByte(data);
 	SPI_stopTranference(SPI_0);
+#endif
+
 }
 
-void LCDNokia_sendChar(uint8_t character) {
+void LCDNokia_sendChar(uint8_t character)
+{
   uint16_t index = 0;
 
   LCDNokia_writeByte(LCD_DATA, 0x00); //Blank vertical line padding
@@ -217,19 +226,27 @@ void LCDNokia_sendChar(uint8_t character) {
   LCDNokia_writeByte(LCD_DATA, 0x00); //Blank vertical line padding
 }
 
-void LCDNokia_sendString(uint8_t *characters) {
+void LCDNokia_sendString(uint8_t *characters)
+{
   while (*characters)
+  {
 	  LCDNokia_sendChar(*characters++);
+  }
 }
 
-void LCDNokia_clear(void) {
+void LCDNokia_clear(void)
+{
 	uint16_t index = 0;
-  for (index = 0 ; index < (LCD_X * LCD_Y / 8) ; index++)
-	  LCDNokia_writeByte(LCD_DATA, 0x00);
-  LCDNokia_gotoXY(0, 0); //After we clear the display, return to the home position
+
+	for (index = 0 ; index < (LCD_X * LCD_Y / 8) ; index++)
+	{
+		LCDNokia_writeByte(LCD_DATA, 0x00);
+	}
+	LCDNokia_gotoXY(0, 0); //After we clear the display, return to the home position
 }
 
-void LCDNokia_gotoXY(uint8_t x, uint8_t y) {
+void LCDNokia_gotoXY(uint8_t x, uint8_t y)
+{
 	LCDNokia_writeByte(LCD_CMD, 0x80 | x);  // Column.
 	LCDNokia_writeByte(LCD_CMD, 0x40 | y);  // Row.  ?
 }
@@ -242,5 +259,82 @@ void LCD_delay(void)
 	{
 
 	}
+}
+
+void LCDNokia_printValue(uint32_t value){
+
+	/**Data Type that saves the real value**/
+	formatASCII real_Value;
+	/**Temporal digit that is an acumulator**/
+	uint8_t temp_digit;
+	/**Counter of digits**/
+	uint8_t counter;
+	/**Value of Zero in ASCII**/
+	const uint8_t zero = 48;
+	/**Init the number of digits at 0**/
+	real_Value.numberDigits = 0;
+
+	/**While the value != 0**/
+	if(value != 0){
+		while(value > 0){
+			/**Save the modulo**/
+			temp_digit = value % 10;
+			/**The modulo is converted to ASCII**/
+			temp_digit = '0' + temp_digit;
+			/**This value is save in the real value**/
+			real_Value.realDigit[real_Value.numberDigits] = temp_digit;
+			/**Continue with the next value**/
+			value /= 10;
+			/**Real value go on with the next position**/
+			real_Value.numberDigits++;
+		}
+
+		/**Print the value saved in real value**/
+		for(counter = real_Value.numberDigits; counter != 0 ; counter--){
+			LCDNokia_sendChar(real_Value.realDigit[counter-1]);
+		}
+	}else{
+		LCDNokia_sendChar(zero);
+	}
+
+}
+
+void LCDNokia_printFloatValue(float value){
+
+	/**Values in ASCII**/
+	const uint8_t wordPoint = 46;
+	const uint8_t numZero = 48;
+	/**Save the temporal Float**/
+	float tmp_Float;
+	/**Saves the two parts of a real number**/
+	uint8_t part_Float;
+	uint32_t part_Int;
+
+	/**Save the float part**/
+	tmp_Float = value - (uint8_t)value;
+	/**Converts the float part into integer**/
+	tmp_Float *= 100;
+	/**The float part is saved **/
+	part_Float = (uint8_t)tmp_Float;
+	/**The int part is saved**/
+	part_Int = (uint8_t)value;
+
+	/**Print the value smaller than 10**/
+	if(part_Float < 10){
+
+		LCDNokia_printValue(part_Int);
+		LCDNokia_sendChar(wordPoint);
+
+		LCDNokia_sendChar(numZero);
+		LCDNokia_printValue(part_Float);
+	}
+	/**Print the value greater than 10**/
+	if(part_Float >= 10){
+
+		LCDNokia_printValue(part_Int);
+		LCDNokia_sendChar(wordPoint);
+		LCDNokia_printValue(part_Float);
+	}
+
 }
 
