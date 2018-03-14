@@ -39,10 +39,12 @@
 #include "clock_config.h"
 #include "MK64F12.h"
 #include "LCDNokia5110.h"
+#include "fsl_uart.h"
 
 #define TEST		(1)
 #define CODE_SPI 	(0)
 #define CODE_UART0	(1)
+#define CODE_UART0_SUB1	(0)
 #define CODE_UART1	(0)
 
 int main(void) {
@@ -57,6 +59,7 @@ int main(void) {
 #if (TEST & CODE_SPI)
 
     dspi_master_config_t masterConfig;
+    bool_t flag_PrinLCD = 1;
 
     DSPI_MasterGetDefaultConfig(&masterConfig);
     DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
@@ -68,15 +71,51 @@ int main(void) {
 
 #if	(TEST & CODE_UART0)
 
+    uart_config_t uart0Config;
+    const uint8_t data[15] = "HOLA MUNDO\r\n";
+
+    UART_GetDefaultConfig(&uart0Config);
+
+    uart0Config.enableRx = true;
+    uart0Config.enableTx = true;
+
+    UART_Init(UART0,&uart0Config,120000000U);
+#if (TEST & CODE_UART0_SUB1)
+
+    UART_EnableInterrupts(UART0, kUART_TxDataRegEmptyInterruptEnable
+    		|kUART_RxDataRegFullInterruptEnable);
+
+    interrupt = UART_GetEnabledInterrupts(UART0);
+
+	if (kUART_TxDataRegEmptyInterruptEnable & interrupt)
+	{
+		printf("TEST_INTERRUPT\r\n");
+	}
+#endif
+
+    UART_WriteBlocking(UART0, data, sizeof(data));
+
 #endif
 
 #if	(TEST & CODE_UART1)
 
 #endif
+
     for(;;)
     {
-    	LCDNokia_printValue(5);
 
+
+
+#if (TES & CODE_SPI0)
+
+    if(1 == flag_PrintLCD)
+    {
+    	LCDNokia_printValue(5);
+    	flag_PrintLCD
+    }
+
+
+#endif
 
     }
     return 0 ;
