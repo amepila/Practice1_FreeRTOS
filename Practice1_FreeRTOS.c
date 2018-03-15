@@ -40,12 +40,13 @@
 #include "MK64F12.h"
 #include "LCDNokia5110.h"
 #include "fsl_uart.h"
+#include "fsl_port.h"
 
 #define TEST		(1)
 #define CODE_SPI 	(0)
 #define CODE_UART0	(1)
 #define CODE_UART0_SUB1	(0)
-#define CODE_UART1	(0)
+
 
 int main(void) {
 
@@ -72,14 +73,34 @@ int main(void) {
 #if	(TEST & CODE_UART0)
 
     uart_config_t uart0Config;
+    uart_config_t uart1Config;
     const uint8_t data[15] = "HOLA MUNDO\r\n";
 
+	CLOCK_EnableClock(kCLOCK_PortC);
+	CLOCK_EnableClock(kCLOCK_Uart1);
+
+	port_pin_config_t config_uart1 =
+	{ 		kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
+	        kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt3,
+	        kPORT_UnlockRegister
+	};
+
+	PORT_SetPinConfig(PORTC, 4, &config_uart1);	//Tx
+	PORT_SetPinConfig(PORTC, 3, &config_uart1);	//Rx
+
     UART_GetDefaultConfig(&uart0Config);
+    UART_GetDefaultConfig(&uart1Config);
 
     uart0Config.enableRx = true;
     uart0Config.enableTx = true;
 
+    uart1Config.enableRx = true;
+    uart1Config.enableTx = true;
+    uart1Config.baudRate_Bps = 38400U;
+
     UART_Init(UART0,&uart0Config,120000000U);
+    UART_Init(UART1,&uart1Config,120000000U);
+
 #if (TEST & CODE_UART0_SUB1)
 
     UART_EnableInterrupts(UART0, kUART_TxDataRegEmptyInterruptEnable
@@ -93,18 +114,13 @@ int main(void) {
 	}
 #endif
 
-    UART_WriteBlocking(UART0, data, sizeof(data));
-
-#endif
-
-#if	(TEST & CODE_UART1)
+    //UART_WriteBlocking(UART0, data, sizeof(data));
 
 #endif
 
     for(;;)
     {
-
-
+        UART_WriteBlocking(UART1, data, sizeof(data));
 
 #if (TES & CODE_SPI0)
 
