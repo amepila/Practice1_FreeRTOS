@@ -41,12 +41,12 @@
 #include "LCDNokia5110.h"
 #include "fsl_uart.h"
 #include "fsl_port.h"
+#include "Task.h"
 
-#define TEST		(1)
+#define TEST		(0)
 #define CODE_SPI 	(0)
-#define CODE_UART0	(1)
+#define CODE_UART0	(0)
 #define CODE_UART0_SUB1	(0)
-
 
 int main(void) {
 
@@ -96,10 +96,14 @@ int main(void) {
 
     uart1Config.enableRx = true;
     uart1Config.enableTx = true;
-    uart1Config.baudRate_Bps = 38400U;
+    uart1Config.baudRate_Bps = 9600U;
 
-    UART_Init(UART0,&uart0Config,120000000U);
-    UART_Init(UART1,&uart1Config,120000000U);
+    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_BusClk));
+    UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_BusClk));
+
+    //UART_WriteBlocking(UART0, data, sizeof(data));
+
+#endif
 
 #if (TEST & CODE_UART0_SUB1)
 
@@ -114,13 +118,13 @@ int main(void) {
 	}
 #endif
 
-    //UART_WriteBlocking(UART0, data, sizeof(data));
-
-#endif
 
     for(;;)
     {
+#if (TEST & CODE_UART0)
         UART_WriteBlocking(UART1, data, sizeof(data));
+
+#endif
 
 #if (TES & CODE_SPI0)
 

@@ -118,8 +118,6 @@ static const uint8_t ASCII[][5] =
 
 void LCDNokia_init(void) {
 
-	gpio_pin_config_t pinControlRegister = {kGPIO_DigitalOutput, 1};
-
 	CLOCK_EnableClock(kCLOCK_PortD);
 	CLOCK_EnableClock(kCLOCK_Spi0);
 
@@ -130,13 +128,14 @@ void LCDNokia_init(void) {
 			kPORT_UnlockRegister
 	};
 
-	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
-	GPIOD->PDDR |= (1<<DATA_OR_CMD_PIN);
 	PORT_SetPinConfig(PORTD, DATA_OR_CMD_PIN, &pinConfig);
-
-	GPIO_PinInit(GPIOD, RESET_PIN, &pinControlRegister);
-	GPIOD->PDDR |= (1<<RESET_PIN);
 	PORT_SetPinConfig(PORTD, RESET_PIN, &pinConfig);
+
+	gpio_pin_config_t pinControlRegister =
+	{kGPIO_DigitalOutput, 1};
+
+	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
+	GPIO_PinInit(GPIOD, RESET_PIN, &pinControlRegister);
 
 	GPIO_PortClear(GPIOD, 1<<RESET_PIN);
 	LCD_delay();

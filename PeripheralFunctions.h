@@ -8,10 +8,13 @@
 #ifndef PERIPHERALFUNCTIONS_H_
 #define PERIPHERALFUNCTIONS_H_
 
+#include "fsl_port.h"
+
 /**
  * \brief A mail box type definition for serial port
  */
-typedef struct{
+typedef struct
+{
 	uint8_t flag; /** Flag to indicate that there is new data*/
 	uint8_t mailBox; /** it contains the received data*/
 } UART_MailBoxType;
@@ -24,11 +27,69 @@ typedef enum {EMPTY, NORMAL, FULL}FIFO_FlagType;
 /**
  * \brief It defines the variables needed by FIFO
  */
-typedef struct{
+typedef struct
+{
 	uint8_t data[50];
 	FIFO_FlagType stateFIFO;
 	uint32_t size;
 }FIFO_Type;
+
+/**
+ * \brief This data type define the states of hour format
+ */
+typedef enum{NON_FORMAT,FORMAT_12H, FORMAT_24H}FORMAT_HOUR;
+
+/**
+ * \brief This data type define the time periods of the hour
+ */
+typedef enum{NON_PERIOD,PERIOD_AM, PERIOD_PM}PERIOD_TIME;
+
+/**
+ * \brief This data type define the structure of Hour
+ */
+typedef struct{
+	uint32_t	hour;
+	uint32_t	minutes;
+	uint32_t	seconds;
+	FORMAT_HOUR format;
+	PERIOD_TIME period;
+}Hour_Type;
+
+/**
+ * \brief This data type define the structure of date
+ */
+typedef struct
+{
+	uint32_t	year;
+	uint32_t	month;
+	uint32_t	day;
+}Date_Type;
+
+/**
+ * \brief This data type define the Lock Flags to general use
+ */
+typedef struct
+{
+	uint8_t flag1 : 1;
+	uint8_t flag2 : 1;
+	uint8_t flag3 : 1;
+	uint8_t flag4 : 1;
+	uint8_t flag5 : 1;
+	uint8_t flag6 : 1;
+	uint8_t flag7 : 1;
+	uint8_t flag8 : 1;
+}LockFlags_Type;
+
+/**
+ * \brief This data type define the structure of Time
+ */
+typedef struct
+{
+	Hour_Type hour;
+	Date_Type date;
+	uint32_t modifyTime;
+	uint32_t modifyDate;
+}Time_Type;
 
 /********************************************************************************************/
 /********************************************************************************************/
@@ -118,6 +179,52 @@ FIFO_FlagType clearFIFO_0(void);
  	 \return Flag of FIFO
  */
 FIFO_FlagType clearFIFO_1(void);
+
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/*!
+ 	 \brief	 Print the hour and date in LCD
+ 	 \param[in]  time Data of time
+ 	 \return void
+ */
+void printTimeLCD(Time_Type time);
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/*!
+ 	 \brief	 Set the time into RTC
+ 	 \param[in]  time Data of time
+ 	 \return void
+ */
+void setTimeLCD(Time_Type time);
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/*!
+ 	 \brief	 Get the current time of RTC
+ 	 \param[in]  void
+ 	 \return The value of Time
+ */
+Time_Type getTime();
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/*!
+ 	 \brief	 Print the hour and date in UART
+ 	 \param[in]  time Data of time
+ 	 \return void
+ */
+void printHourUART(Time_Type time);
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/*!
+ 	 \brief	 Print the hour and date in UART
+ 	 \param[in]  time Data of time
+ 	 \return void
+ */
+void printDateUART(Time_Type time);
 
 
 #endif /* PERIPHERALFUNCTIONS_H_ */
