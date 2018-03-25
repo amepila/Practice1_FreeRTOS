@@ -10,8 +10,34 @@
 #include "fsl_dspi.h"
 #include "PeripheralFunctions.h"
 
-FIFO_Type FIFO_UART0;
-FIFO_Type FIFO_UART1;
+/**ASCII table such as reference**/
+
+typedef enum{
+		ASCII_SPACE = 32,	ASCII_EXCLAMATION,	ASCII_QUOTATION,	ASCII_SHARP,		ASCII_DOLLAR,
+		ASCII_PERCENT,		ASCII_AMPERSON,		ASCII_APOS,			ASCII_PAROPEN,		ASCII_PARCLOSE,
+		ASCII_AST,			ASCII_PLUS,			ASCII_COMMA,		ASCII_MINUS,		ASCII_POINT,
+		ASCII_DIAG,			ASCII_0,			ASCII_1,			ASCII_2,			ASCII_3,
+		ASCII_4,			ASCII_5,			ASCII_6,			ASCII_7,			ASCII_8,
+		ASCII_9,			ASCII_DOUBLEPOINT,	ASCII_COMMAPOINT,	ASCII_MINOR,		ASCII_EQUAL,
+		ASCII_MAYOR,		ASCII_QUESTION,		ASCII_COMMAT,		ASCII_A,			ASCII_B,
+		ASCII_C,			ASCII_D,			ASCII_E,			ASCII_F,			ASCII_G,
+		ASCII_H,			ASCII_I,			ASCII_J,			ASCII_K,			ASCII_L,
+		ASCII_M,			ASCII_N,			ASCII_O,			ASCII_P,			ASCII_Q,
+		ASCII_R,			ASCII_S,			ASCII_T,			ASCII_U,			ASCII_V,
+		ASCII_W,			ASCII_X,			ASCII_Y,			ASCII_Z,			ASCII_CORCHOPEN,
+		ASCII_DIAG2,		ASCII_CORCHCLOSE,	ASCII_HAT,			ASCII_LOWBAR,		ASCII_GRAVE,
+		ASCII_a,			ASCII_b,			ASCII_c,			ASCII_d,			ASCII_e,
+		ASCII_f,			ASCII_g,			ASCII_h,			ASCII_i,			ASCII_j,
+		ASCII_k,			ASCII_l,			ASCII_m,			ASCII_n,			ASCII_o,
+		ASCII_p,			ASCII_q,			ASCII_r,			ASCII_s,			ASCII_t,
+		ASCII_u,			ASCII_v,			ASCII_w,			ASCII_x,			ASCII_y,
+		ASCII_z,			ASCII_BRACEOPEN,	ASCII_VERT,			ASCII_BRACECLOSE,	ASCII_TILDE
+}ASCII_code;
+
+/**Structure with the time*/
+static Time_Type Clock;
+const uint32_t Medium_Hour = (0x12U);
+
 
 void delay(uint32_t delay)
 {
@@ -87,175 +113,27 @@ uint8_t Convert_wordASCIItoDATA(uint8_t word)
 	return (valueWord);
 }
 
-FIFO_Type popFIFO_0(void)
-{
-
-	uint32_t counterSize = 0;
-	uint32_t position = 0;
-	uint32_t counterClear;
-	static uint32_t counterChar;
-	FIFO_Type fifo;
-
-	/*Loop to find the size*/
-	while(FIFO_UART0.data[counterSize] != '\0')
-	{
-		counterSize++;
-	}
-
-	/*Second loop to clear the FIFO*/
-	for(counterClear = 0; counterClear < 50; counterClear++)
-	{
-		fifo.data[counterClear] = '\0';
-	}
-	/*Third loop to save the value into FIFO*/
-	for(counterChar = counterSize; counterChar != 0; counterChar--)
-	{
-		fifo.data[position] = FIFO_UART0.data[position];
-		position++;
-	}
-
-	fifo.size = counterSize;
-	fifo.stateFIFO = NORMAL;
-	return (fifo);
-}
-
-FIFO_Type popFIFO_1(void)
-{
-	uint32_t counterSize = 0;
-	uint32_t position = 0;
-	uint32_t counterClear;
-	static uint32_t counterChar;
-	FIFO_Type fifo;
-
-	/*Loop to find the size*/
-	while(FIFO_UART1.data[counterSize] != '\0')
-	{
-		counterSize++;
-	}
-	/*Second loop to clear the FIFO*/
-	for(counterClear = 0; counterClear < 50; counterClear++)
-	{
-		fifo.data[counterClear] = '\0';
-	}
-	/*Third loop to save the data into FIFO*/
-	for(counterChar = counterSize; counterChar != 0; counterChar--)
-	{
-		fifo.data[position] = FIFO_UART1.data[position];
-		position++;
-	}
-
-	fifo.size = counterSize;
-	fifo.stateFIFO = NORMAL;
-	return (fifo);
-}
-
-FIFO_FlagType pushFIFO_0(uint8_t character)
-{
-
-	static uint32_t counterChar = 0;
-	const uint32_t CR = 13;
-
-	/*Get the info into FIFO until find the CR value*/
-	if(character != CR)
-	{
-		FIFO_UART0.data[counterChar] = character;
-		counterChar++;
-		FIFO_UART0.stateFIFO = NORMAL;
-		FIFO_UART0.size = 0;
-	}
-	else
-	{
-		FIFO_UART0.data[counterChar] = character;
-		FIFO_UART0.size = counterChar;
-		counterChar = 0;
-		FIFO_UART0.stateFIFO = NORMAL;
-		if(FIFO_UART0.size >= 50)
-		{
-			FIFO_UART0.stateFIFO = FULL;
-		}
-	}
-	return (FIFO_UART0.stateFIFO);
-
-}
-
-FIFO_FlagType pushFIFO_1(uint8_t character)
-{
-
-	static uint32_t counterChar = 0;
-	const uint32_t CR = 13;
-
-	/*Get the info into FIFO until find the CR value*/
-	if(character != CR)
-	{
-		FIFO_UART1.data[counterChar] = character;
-		counterChar++;
-		FIFO_UART1.stateFIFO = NORMAL;
-	}
-	else
-	{
-		FIFO_UART1.data[counterChar] = character;
-		FIFO_UART1.size = counterChar;
-		counterChar = 0;
-		FIFO_UART1.stateFIFO = NORMAL;
-		if(FIFO_UART1.size >= 50)
-		{
-			FIFO_UART1.stateFIFO = FULL;
-		}
-	}
-	return (FIFO_UART1.stateFIFO);
-}
-
-FIFO_FlagType clearFIFO_0(void)
-{
-	uint32_t counter;
-
-	/*Clear the FIFO*/
-	for(counter = 0; counter < 50; counter++)
-	{
-		FIFO_UART0.data[counter] = '\0';
-	}
-	FIFO_UART0.size = 0;
-	FIFO_UART0.stateFIFO = EMPTY;
-
-	return (FIFO_UART0.stateFIFO);
-}
-
-FIFO_FlagType clearFIFO_1(void)
-{
-	uint32_t counter;
-
-	/*Clear the FIFO*/
-	for(counter = 0; counter < 50; counter++)
-	{
-		FIFO_UART1.data[counter] = '\0';
-	}
-	FIFO_UART1.size = 0;
-	FIFO_UART1.stateFIFO = EMPTY;
-
-	return (FIFO_UART1.stateFIFO);
-}
-
 void setTimeLCD(Time_Type time)
 {
 	/**Set the hour*/
-	if(TRUE == time.modifyTime)
+	if(1 == time.modifyTime)
 	{
 		setRTC_sec((uint8_t)time.hour.seconds);
 		setRTC_min((uint8_t)time.hour.minutes);
 		setRTC_hour((uint8_t)time.hour.hour);
 		/**Save the info into Clock*/
 		Clock = time;
-		time.modifyTime= FALSE;
+		time.modifyTime= 0;
 	}
 	/**Set the date*/
-	if(TRUE == time.modifyDate)
+	if(1 == time.modifyDate)
 	{
-		setRTC_day((uint8)time.date.day);
-		setRTC_month((uint8)time.date.month);
-		setRTC_year((uint8)time.date.year);
+		setRTC_day((uint8_t)time.date.day);
+		setRTC_month((uint8_t)time.date.month);
+		setRTC_year((uint8_t)time.date.year);
 		/**Save the info into Clock*/
 		Clock = time;
-		time.modifyDate = FALSE;
+		time.modifyDate = 0;
 	}
 }
 
@@ -344,7 +222,6 @@ void printTimeLCD(Time_Type time)
 		/**If the value is more than 12 then is rested 12*/
 		if(readRTC_hour() > (Medium_Hour))
 		{
-
 			tmpHour = readRTC_hour();
 			tmpHour -= (Medium_Hour);
 
@@ -482,66 +359,66 @@ void printHourUART(Time_Type time)
 	/**Verified if the data is different that zero*/
 	if('0' == date[0])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[0]);
+	    UART_WriteBlocking(UART0, date[0], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[1])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[1]);
+	    UART_WriteBlocking(UART0, date[1], sizeof(uint8_t));
 	}
-	UART_putChar(UART_0, ASCII_DOUBLEPOINT);
+    UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT, sizeof(uint8_t));
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[2])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[2]);
+	    UART_WriteBlocking(UART0, date[2], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[3])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[3]);
+	    UART_WriteBlocking(UART0, date[3], sizeof(uint8_t));
 	}
-	UART_putChar(UART_0, ASCII_DOUBLEPOINT);
+    UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT, sizeof(uint8_t));
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[4])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[4]);
+	    UART_WriteBlocking(UART0, date[4], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[5])
 	{
-		UART_putChar(UART_0, ASCII_0);
+	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-		UART_putChar(UART_0, date[5]);
+	    UART_WriteBlocking(UART0, date[5], sizeof(uint8_t));
 	}
 
-	UART_putString(UART_0,"\033[10;36H");
+    UART_WriteBlocking(UART0, "\033[10;36H", sizeof(uint8_t));
 }
 
 void printDateUART(Time_Type time)
@@ -583,14 +460,15 @@ void printDateUART(Time_Type time)
 	date[5] = '0' + partUnYear;
 
 	/**Print the date*/
-	UART_putChar(UART_0, date[0]);
-	UART_putChar(UART_0, date[1]);
-	UART_putChar(UART_0, ASCII_DIAG);
-	UART_putChar(UART_0, date[2]);
-	UART_putChar(UART_0, date[3]);
-	UART_putChar(UART_0, ASCII_DIAG);
-	UART_putChar(UART_0, date[4]);
-	UART_putChar(UART_0, date[5]);
+    UART_WriteBlocking(UART0, date[0], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, date[1], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, ASCII_DIAG, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, date[2], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, date[3], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, ASCII_DIAG, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, date[4], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, date[5], sizeof(uint8_t));
+
 }
 
 

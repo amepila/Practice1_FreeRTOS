@@ -39,14 +39,39 @@
 #include "clock_config.h"
 #include "MK64F12.h"
 #include "LCDNokia5110.h"
+#include "Buttons.h"
 #include "fsl_uart.h"
 #include "fsl_port.h"
+#include "fsl_debug_console.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "queue.h"
+#include "event_groups.h"
 #include "Task.h"
 
-#define TEST		(0)
-#define CODE_SPI 	(0)
-#define CODE_UART0	(0)
+#define TEST			(0)
+#define CODE_SPI 		(0)
+#define CODE_UART0		(0)
 #define CODE_UART0_SUB1	(0)
+
+#define BIT2	(2)
+#define BIT5	(5)
+#define BIT7	(7)
+#define BIT0	(0)
+
+SemaphoreHandle_t g_semaphore_test;
+EventGroupHandle_t g_button_events;
+uint32_t g_interrupt_UART0;
+
+/**Set of pin of Buttons**/
+const Button_ConfigType Buttons_Config[4] =
+{
+		{PORT_C,BIT2},	/**Button 1**/
+		{PORT_C,BIT5},	/**Button 2**/
+		{PORT_C,BIT7},	/**Button 3**/
+		{PORT_C,BIT0}   /**Button 4**/
+};
 
 int main(void) {
 
@@ -56,6 +81,30 @@ int main(void) {
     BOARD_InitBootPeripherals();
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
+
+    uart_config_t uart0Config;
+
+    UART_GetDefaultConfig(&uart0Config);
+
+    uart0Config.enableRx = true;
+    uart0Config.enableTx = true;
+
+	Buttons_init(Buttons_Config);
+    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
+
+	//NVIC_EnableIRQ(PORTC_IRQn);
+	//NVIC_SetPriority(PORTC_IRQn,3);
+
+	NVIC_EnableIRQ(UART0_RX_TX_IRQn);
+	NVIC_SetPriority(UART0_RX_TX_IRQn,5);
+
+    UART_EnableInterrupts(UART0, kUART_RxActiveEdgeInterruptEnable);
+
+	g_button_events = xEventGroupCreate();
+	g_semaphore_test = xSemaphoreCreateBinary();
+
+	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+	vTaskStartScheduler();
 
 #if (TEST & CODE_SPI)
 
@@ -117,7 +166,6 @@ int main(void) {
 		printf("TEST_INTERRUPT\r\n");
 	}
 #endif
-
 
     for(;;)
     {

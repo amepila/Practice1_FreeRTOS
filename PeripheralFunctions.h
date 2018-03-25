@@ -11,30 +11,6 @@
 #include "fsl_port.h"
 
 /**
- * \brief A mail box type definition for serial port
- */
-typedef struct
-{
-	uint8_t flag; /** Flag to indicate that there is new data*/
-	uint8_t mailBox; /** it contains the received data*/
-} UART_MailBoxType;
-
-/**
- * \brief It defines states of FIFO
- */
-typedef enum {EMPTY, NORMAL, FULL}FIFO_FlagType;
-
-/**
- * \brief It defines the variables needed by FIFO
- */
-typedef struct
-{
-	uint8_t data[50];
-	FIFO_FlagType stateFIFO;
-	uint32_t size;
-}FIFO_Type;
-
-/**
  * \brief This data type define the states of hour format
  */
 typedef enum{NON_FORMAT,FORMAT_12H, FORMAT_24H}FORMAT_HOUR;
@@ -125,60 +101,6 @@ uint32_t Convert_numberASCIItoDATA(uint8_t *string);
  	 \return character converted
  */
 uint8_t Convert_wordASCIItoDATA(uint8_t word);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Pop the data into FIFO
- 	 \param[in]  void
- 	 \return Data Type of FIFO
- */
-FIFO_Type popFIFO_0(void);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Pop the data into FIFO
- 	 \param[in]  void
- 	 \return Data Type of FIFO
- */
-FIFO_Type popFIFO_1(void);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Push the data into FIFO
- 	 \param[in]  character The value to set
- 	 \return Flag of FIFO
- */
-FIFO_FlagType pushFIFO_0(uint8_t character);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Push the data into FIFO
- 	 \param[in]  character The value to set
- 	 \return Flag of FIFO
- */
-FIFO_FlagType pushFIFO_1(uint8_t character);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Clear the FIFO
- 	 \param[in]  void
- 	 \return Flag of FIFO
- */
-FIFO_FlagType clearFIFO_0(void);
-/********************************************************************************************/
-/********************************************************************************************/
-/********************************************************************************************/
-/*!
- 	 \brief	 Clear the FIFO
- 	 \param[in]  void
- 	 \return Flag of FIFO
- */
-FIFO_FlagType clearFIFO_1(void);
 
 /********************************************************************************************/
 /********************************************************************************************/
