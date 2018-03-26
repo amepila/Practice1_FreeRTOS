@@ -40,16 +40,11 @@ extern uint32_t g_interrupt_UART0;
 
 void UART0_RX_TX_IRQHandler()
 {
-	uint8_t byteReceived;
 	BaseType_t xHigherPriorityTaskWoken;
 
 	xHigherPriorityTaskWoken = pdFALSE;
-
-	while( xQueueReceiveFromISR(g_queue_uart0, &byteReceived,
-			&xHigherPriorityTaskWoken) == pdPASS)
-	{
-		xSemaphoreGiveFromISR(g_semaphore_test, &xHigherPriorityTaskWoken);
-	}
+	//xSemaphoreGiveFromISR(g_semaphore_test, &xHigherPriorityTaskWoken);
+	//xQueueGiveFromISR(g_queue_uart0, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
@@ -94,6 +89,7 @@ void PORTC_IRQHandler()
 void taskINIT(void *arg)
 {
 	uint8_t data[3];
+	uint8_t byteReceived;
 
 	xSemaphoreTake(g_mutex_uart0,portMAX_DELAY);
 	menu_Main();
@@ -103,13 +99,13 @@ void taskINIT(void *arg)
 
 	for(;;)
 	{
-	    if(kUART_RxActiveEdgeInterruptEnable == UART_GetEnabledInterrupts(UART0))
-	    {
-	    	UART_ReadBlocking(UART0, data, sizeof(data));
-	    }
 		xSemaphoreTake(g_semaphore_test,portMAX_DELAY);
 
-		PRINTF("SUCCESS\n");
+		if(xQueueReceive(g_queue_uart0, &byteReceived,
+				portMAX_DELAY) == pdPASS)
+		{
+			PRINTF("SUCCESS\n");
+		}
 	}
 }
 

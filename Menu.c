@@ -7,6 +7,10 @@
 
 #include "Menu.h"
 
+extern uart_handle_t g_uart0Handle;
+extern uart_transfer_t g_sendXUart0;
+extern uart_transfer_t g_receiveXUart0;
+
 const uint8_t clearScreen[10] = "\033[2J";
 const uint8_t line10[15] = "\033[10;10H";
 const uint8_t line11[15] = "\033[11;10H";
@@ -38,7 +42,8 @@ uint8_t menu_Main(void)
 	 * is coded with terminal code*/
 
 	/*VT100 command for clearing the screen*/
-    UART_WriteBlocking(UART0, clearScreen, sizeof(clearScreen));
+	UART_TransferSendNonBlocking(UART0, clearScreen, sizeof(clearScreen));
+	UART_TransferSendNonBlocking(UART0, g_uart0Handle, g_sendXUart0);
 
 	/** VT100 command for positioning the cursor in x and y position*/
 

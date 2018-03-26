@@ -65,6 +65,12 @@ EventGroupHandle_t g_button_events;
 SemaphoreHandle_t g_mutex_uart0;
 QueueHandle_t g_queue_uart0;
 
+uart_handle_t g_uart0Handle;
+uart_transfer_t g_sendXUart0;
+uart_transfer_t g_receiveXUart0;
+volatile bool txFinished;
+volatile bool rxFinished;
+
 /**Set of pin of Buttons**/
 const Button_ConfigType Buttons_Config[4] =
 {
@@ -73,6 +79,19 @@ const Button_ConfigType Buttons_Config[4] =
 		{PORT_C,BIT7},	/**Button 3**/
 		{PORT_C,BIT0}   /**Button 4**/
 };
+
+static void uart0_transfer_callback(UART_Type *base, uart_handle_t *handle,
+		status_t status, void *userData)
+{
+	if (kStatus_UART_TxIdle == status)
+	{
+		txFinished = true;
+	}
+	if (kStatus_UART_RxIdle == status)
+	{
+		rxFinished = true;
+	}
+}
 
 int main(void) {
 
@@ -92,6 +111,7 @@ int main(void) {
 
 	Buttons_init(Buttons_Config);
     UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
+    UART_TransferCreateHandle(UART0, &g_uart0Handle, uart0_transfer_callback, NULL);
 
 	//NVIC_EnableIRQ(PORTC_IRQn);
 	//NVIC_SetPriority(PORTC_IRQn,5);
