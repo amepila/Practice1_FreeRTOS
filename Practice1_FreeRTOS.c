@@ -52,8 +52,6 @@
 
 #define TEST			(0)
 #define CODE_SPI 		(0)
-#define CODE_UART0		(0)
-#define CODE_UART0_SUB1	(0)
 
 #define BIT2	(2)
 #define BIT5	(5)
@@ -63,13 +61,6 @@
 SemaphoreHandle_t g_semaphore_test;
 EventGroupHandle_t g_button_events;
 SemaphoreHandle_t g_mutex_uart0;
-QueueHandle_t g_queue_uart0;
-
-uart_handle_t g_uart0Handle;
-uart_transfer_t g_sendXUart0;
-uart_transfer_t g_receiveXUart0;
-volatile bool txFinished;
-volatile bool rxFinished;
 
 /**Set of pin of Buttons**/
 const Button_ConfigType Buttons_Config[4] =
@@ -80,19 +71,6 @@ const Button_ConfigType Buttons_Config[4] =
 		{PORT_C,BIT0}   /**Button 4**/
 };
 
-static void uart0_transfer_callback(UART_Type *base, uart_handle_t *handle,
-		status_t status, void *userData)
-{
-	if (kStatus_UART_TxIdle == status)
-	{
-		txFinished = true;
-	}
-	if (kStatus_UART_RxIdle == status)
-	{
-		rxFinished = true;
-	}
-}
-
 int main(void) {
 
   	/* Init board hardware. */
@@ -102,29 +80,16 @@ int main(void) {
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
 
-    uart_config_t uart0Config;
+    init_UART0();
 
-    UART_GetDefaultConfig(&uart0Config);
-
-    uart0Config.enableRx = true;
-    uart0Config.enableTx = true;
-
-	Buttons_init(Buttons_Config);
-    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
-    UART_TransferCreateHandle(UART0, &g_uart0Handle, uart0_transfer_callback, NULL);
-
-	//NVIC_EnableIRQ(PORTC_IRQn);
-	//NVIC_SetPriority(PORTC_IRQn,5);
-
-	NVIC_EnableIRQ(UART0_RX_TX_IRQn);
-	NVIC_SetPriority(UART0_RX_TX_IRQn,5);
+	NVIC_EnableIRQ(PORTC_IRQn);
+	NVIC_SetPriority(PORTC_IRQn,5);
 
 	g_button_events = xEventGroupCreate();
 	g_semaphore_test = xSemaphoreCreateBinary();
 	g_mutex_uart0 = xSemaphoreCreateMutex();
-	g_queue_uart0 = xQueueCreate(1,sizeof(uint8_t));
 
-	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
 	vTaskStartScheduler();
 
 #if (TEST & CODE_SPI)
@@ -140,54 +105,6 @@ int main(void) {
 
 #endif
 
-#if	(TEST & CODE_UART0)
-
-    uart_config_t uart0Config;
-    uart_config_t uart1Config;
-    const uint8_t data[15] = "HOLA MUNDO\r\n";
-
-	CLOCK_EnableClock(kCLOCK_PortC);
-	CLOCK_EnableClock(kCLOCK_Uart1);
-
-	port_pin_config_t config_uart1 =
-	{ 		kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
-	        kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt3,
-	        kPORT_UnlockRegister
-	};
-
-	PORT_SetPinConfig(PORTC, 4, &config_uart1);	//Tx
-	PORT_SetPinConfig(PORTC, 3, &config_uart1);	//Rx
-
-    UART_GetDefaultConfig(&uart0Config);
-    UART_GetDefaultConfig(&uart1Config);
-
-    uart0Config.enableRx = true;
-    uart0Config.enableTx = true;
-
-    uart1Config.enableRx = true;
-    uart1Config.enableTx = true;
-    uart1Config.baudRate_Bps = 9600U;
-
-    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_BusClk));
-    UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_BusClk));
-
-    //UART_WriteBlocking(UART0, data, sizeof(data));
-
-#endif
-
-#if (TEST & CODE_UART0_SUB1)
-
-    UART_EnableInterrupts(UART0, kUART_TxDataRegEmptyInterruptEnable
-    		|kUART_RxDataRegFullInterruptEnable);
-
-    interrupt = UART_GetEnabledInterrupts(UART0);
-
-	if (kUART_TxDataRegEmptyInterruptEnable & interrupt)
-	{
-		printf("TEST_INTERRUPT\r\n");
-	}
-#endif
-
     for(;;)
     {
 #if (TES & CODE_SPI0)
@@ -197,10 +114,7 @@ int main(void) {
     	LCDNokia_printValue(5);
     	flag_PrintLCD
     }
-
-
 #endif
-
     }
     return 0 ;
 }

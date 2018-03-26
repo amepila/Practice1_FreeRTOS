@@ -7,9 +7,9 @@
 
 #include "Menu.h"
 
-extern uart_handle_t g_uart0Handle;
-extern uart_transfer_t g_sendXUart0;
-extern uart_transfer_t g_receiveXUart0;
+uart_handle_t g_uart0Handle;
+uart_transfer_t g_receiveXUart0;
+volatile bool rxFinished;
 
 const uint8_t clearScreen[10] = "\033[2J";
 const uint8_t line10[15] = "\033[10;10H";
@@ -24,9 +24,60 @@ const uint8_t line18[15] = "\033[18;10H";
 const uint8_t line19[15] = "\033[19;10H";
 const uint8_t line20[15] = "\033[20;10H";
 
-uint8_t menu_Main(void)
+static void uart0_transfer_callback(UART_Type *base, uart_handle_t *handle,
+		status_t status, void *userData)
 {
+	if (kStatus_UART_RxIdle == status)
+	{
+		rxFinished = true;
+	}
+}
 
+status_t init_UART0(void)
+{
+    uart_config_t uart0Config;
+
+    UART_GetDefaultConfig(&uart0Config);
+
+    uart0Config.enableRx = true;
+    uart0Config.enableTx = true;
+
+    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
+    UART_TransferCreateHandle(UART0, &g_uart0Handle, uart0_transfer_callback, NULL);
+
+	return (kStatus_Success);
+}
+
+status_t init_UART1(void)
+{
+	CLOCK_EnableClock(kCLOCK_PortC);
+	CLOCK_EnableClock(kCLOCK_Uart1);
+
+	port_pin_config_t config_uart1 =
+	{ 		kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
+	        kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt3,
+	        kPORT_UnlockRegister
+	};
+
+	PORT_SetPinConfig(PORTC, 4, &config_uart1);	//Tx
+	PORT_SetPinConfig(PORTC, 3, &config_uart1);	//Rx
+
+    uart_config_t uart1Config;
+
+    UART_GetDefaultConfig(&uart1Config);
+
+    uart1Config.enableRx = true;
+    uart1Config.enableTx = true;
+    uart1Config.baudRate_Bps = 9600U;
+
+    UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
+
+	return (kStatus_Success);
+}
+
+
+uint8_t menu_Main0(void)
+{
 	const uint8_t string1[35] = "MENU PRINCIPAL\r";
 	const uint8_t string2[35] = "1) Leer memoria I2C\r";
 	const uint8_t string3[35] = "2) Escribir memoria I2C\r";
@@ -42,8 +93,7 @@ uint8_t menu_Main(void)
 	 * is coded with terminal code*/
 
 	/*VT100 command for clearing the screen*/
-	UART_TransferSendNonBlocking(UART0, clearScreen, sizeof(clearScreen));
-	UART_TransferSendNonBlocking(UART0, g_uart0Handle, g_sendXUart0);
+	UART_WriteBlocking(UART0, clearScreen, sizeof(clearScreen));
 
 	/** VT100 command for positioning the cursor in x and y position*/
 
@@ -79,6 +129,63 @@ uint8_t menu_Main(void)
 
 	/** VT100 command for positioning the cursor in x and y position*/
     UART_WriteBlocking(UART0, line20, sizeof(line20));
+
+	return (1);
+}
+
+uint8_t menu_Main1(void)
+{
+	const uint8_t string1[35] = "MENU PRINCIPAL\r";
+	const uint8_t string2[35] = "1) Leer memoria I2C\r";
+	const uint8_t string3[35] = "2) Escribir memoria I2C\r";
+	const uint8_t string4[35] = "3) Establecer hora\r";
+	const uint8_t string5[35] = "4) Establecer fecha\r";
+	const uint8_t string6[35] = "5) Formato de hora\r";
+	const uint8_t string7[35] = "6) Leer hora\r";
+	const uint8_t string8[35] = "7) Leer fecha\r";
+	const uint8_t string9[35] = "8) Comunicacion con terminal 2\r";
+	const uint8_t string10[35] = "9) Eco en LCD\r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	/*VT100 command for clearing the screen*/
+	UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+
+	/** VT100 command for positioning the cursor in x and y position*/
+
+    UART_WriteBlocking(UART1, line10, sizeof(line10));
+    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+    UART_WriteBlocking(UART1, line11, sizeof(line11));
+    UART_WriteBlocking(UART1, string2, sizeof(string2));
+
+    UART_WriteBlocking(UART1, line12, sizeof(line12));
+    UART_WriteBlocking(UART1, string3, sizeof(string3));
+
+    UART_WriteBlocking(UART1, line13, sizeof(line13));
+    UART_WriteBlocking(UART1, string4, sizeof(string4));
+
+    UART_WriteBlocking(UART1, line14, sizeof(line14));
+    UART_WriteBlocking(UART1, string5, sizeof(string5));
+
+    UART_WriteBlocking(UART1, line15, sizeof(line15));
+    UART_WriteBlocking(UART1, string6, sizeof(string6));
+
+    UART_WriteBlocking(UART1, line16, sizeof(line16));
+    UART_WriteBlocking(UART1, string7, sizeof(string7));
+
+    UART_WriteBlocking(UART1, line17, sizeof(line17));
+    UART_WriteBlocking(UART1, string8, sizeof(string8));
+
+    UART_WriteBlocking(UART1, line18, sizeof(line18));
+    UART_WriteBlocking(UART1, string9, sizeof(string9));
+
+    UART_WriteBlocking(UART1, line19, sizeof(line19));
+    UART_WriteBlocking(UART1, string10, sizeof(string10));
+
+	/** VT100 command for positioning the cursor in x and y position*/
+    UART_WriteBlocking(UART1, line20, sizeof(line20));
 
 	return (1);
 }
@@ -527,53 +634,6 @@ uint8_t menu_EcoLCD(uint8_t phase)
 		flagContinue.flag2 = 0;
 		return 0;
 	}
-	return 1;
-}
-
-uint8_t menu_Main1(void)
-{
-	const uint8_t string1[35]= "MENU PRINCIPAL\r";
-	const uint8_t string2[35]= "1) Leer memoria I2C\r";
-	const uint8_t string3[35]= "2) Escribir memoria I2C\r";
-	const uint8_t string4[35]= "3) Establecer hora\r";
-	const uint8_t string5[35]= "4) Establecer fecha\r";
-	const uint8_t string6[35]= "5) Formato de hora\r";
-	const uint8_t string7[35]= "6) Leer hora\r";
-	const uint8_t string8[35]= "7) Leer fecha\r";
-	const uint8_t string9[35]= "8) Comunicacion con terminal 2\r";
-	const uint8_t string10[35]= "9) Eco en LCD\r";
-
-	/**The following sentences send strings to PC using the UART_putString function. Also, the string
-	 * is coded with terminal code*/
-
-	/*VT100 command for clearing the screen*/
-    UART_WriteBlocking(UART0, clearScreen, sizeof(clearScreen));
-
-	/** VT100 command for positioning the cursor in x and y position*/
-    UART_WriteBlocking(UART0, line10, sizeof(line10));
-    UART_WriteBlocking(UART0, string1, sizeof(string1));
-    UART_WriteBlocking(UART0, line11, sizeof(line11));
-    UART_WriteBlocking(UART0, string2, sizeof(string2));
-    UART_WriteBlocking(UART0, line12, sizeof(line12));
-    UART_WriteBlocking(UART0, string3, sizeof(string3));
-    UART_WriteBlocking(UART0, line13, sizeof(line13));
-    UART_WriteBlocking(UART0, string4, sizeof(string4));
-    UART_WriteBlocking(UART0, line14, sizeof(line14));
-    UART_WriteBlocking(UART0, string5, sizeof(string5));
-    UART_WriteBlocking(UART0, line15, sizeof(line15));
-    UART_WriteBlocking(UART0, string6, sizeof(string6));
-    UART_WriteBlocking(UART0, line16, sizeof(line16));
-    UART_WriteBlocking(UART0, string7, sizeof(string7));
-    UART_WriteBlocking(UART0, line17, sizeof(line17));
-    UART_WriteBlocking(UART0, string8, sizeof(string8));
-    UART_WriteBlocking(UART0, line18, sizeof(line18));
-    UART_WriteBlocking(UART0, string9, sizeof(string9));
-    UART_WriteBlocking(UART0, line19, sizeof(line19));
-    UART_WriteBlocking(UART0, string10, sizeof(string10));
-
-	/** VT100 command for positioning the cursor in x and y position*/
-    UART_WriteBlocking(UART0, line20, sizeof(line20));
-
 	return 1;
 }
 
