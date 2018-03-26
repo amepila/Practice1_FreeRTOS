@@ -62,7 +62,8 @@
 
 SemaphoreHandle_t g_semaphore_test;
 EventGroupHandle_t g_button_events;
-uint32_t g_interrupt_UART0;
+SemaphoreHandle_t g_mutex_uart0;
+QueueHandle_t g_queue_uart0;
 
 /**Set of pin of Buttons**/
 const Button_ConfigType Buttons_Config[4] =
@@ -93,15 +94,15 @@ int main(void) {
     UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
 
 	//NVIC_EnableIRQ(PORTC_IRQn);
-	//NVIC_SetPriority(PORTC_IRQn,3);
+	//NVIC_SetPriority(PORTC_IRQn,5);
 
 	NVIC_EnableIRQ(UART0_RX_TX_IRQn);
 	NVIC_SetPriority(UART0_RX_TX_IRQn,5);
 
-    UART_EnableInterrupts(UART0, kUART_RxActiveEdgeInterruptEnable);
-
 	g_button_events = xEventGroupCreate();
 	g_semaphore_test = xSemaphoreCreateBinary();
+	g_mutex_uart0 = xSemaphoreCreateMutex();
+	g_queue_uart0 = xQueueCreate(1,sizeof(uint8_t));
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	vTaskStartScheduler();
@@ -169,11 +170,6 @@ int main(void) {
 
     for(;;)
     {
-#if (TEST & CODE_UART0)
-        UART_WriteBlocking(UART1, data, sizeof(data));
-
-#endif
-
 #if (TES & CODE_SPI0)
 
     if(1 == flag_PrintLCD)
