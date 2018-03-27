@@ -7,10 +7,6 @@
 
 #include "Menu.h"
 
-uart_handle_t g_uart0Handle;
-uart_transfer_t g_receiveXUart0;
-volatile bool rxFinished;
-
 const uint8_t clearScreen[10] = "\033[2J";
 const uint8_t line10[15] = "\033[10;10H";
 const uint8_t line11[15] = "\033[11;10H";
@@ -23,58 +19,6 @@ const uint8_t line17[15] = "\033[17;10H";
 const uint8_t line18[15] = "\033[18;10H";
 const uint8_t line19[15] = "\033[19;10H";
 const uint8_t line20[15] = "\033[20;10H";
-
-static void uart0_transfer_callback(UART_Type *base, uart_handle_t *handle,
-		status_t status, void *userData)
-{
-	if (kStatus_UART_RxIdle == status)
-	{
-		rxFinished = true;
-	}
-}
-
-status_t init_UART0(void)
-{
-    uart_config_t uart0Config;
-
-    UART_GetDefaultConfig(&uart0Config);
-
-    uart0Config.enableRx = true;
-    uart0Config.enableTx = true;
-
-    UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
-    UART_TransferCreateHandle(UART0, &g_uart0Handle, uart0_transfer_callback, NULL);
-
-	return (kStatus_Success);
-}
-
-status_t init_UART1(void)
-{
-	CLOCK_EnableClock(kCLOCK_PortC);
-	CLOCK_EnableClock(kCLOCK_Uart1);
-
-	port_pin_config_t config_uart1 =
-	{ 		kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
-	        kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt3,
-	        kPORT_UnlockRegister
-	};
-
-	PORT_SetPinConfig(PORTC, 4, &config_uart1);	//Tx
-	PORT_SetPinConfig(PORTC, 3, &config_uart1);	//Rx
-
-    uart_config_t uart1Config;
-
-    UART_GetDefaultConfig(&uart1Config);
-
-    uart1Config.enableRx = true;
-    uart1Config.enableTx = true;
-    uart1Config.baudRate_Bps = 9600U;
-
-    UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
-
-	return (kStatus_Success);
-}
-
 
 uint8_t menu_Main0(void)
 {

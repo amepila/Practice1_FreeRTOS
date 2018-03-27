@@ -14,6 +14,8 @@
 #include "LCDNokia5110.h"
 
 #define TEST	(0)
+#define BIT_DATA	(1<<3)
+#define BIT_RESET	(1<<0)
 
 static const uint8_t ASCII[][5] =
 {
@@ -115,6 +117,34 @@ static const uint8_t ASCII[][5] =
 ,{0x78, 0x46, 0x41, 0x46, 0x78} // 7f
 };
 
+dspi_master_handle_t g_dspiHandle;
+dspi_transfer_t g_receiveXDspi;
+volatile bool masterFinished;
+
+static void dspi_master_transfer_callback(SPI_Type *base,
+		dspi_master_handle_t *handle, status_t status, void *userData)
+{
+	if (kStatus_DSPI_Idle == status)
+	{
+		masterFinished = true;
+	}
+}
+
+status_t init_SPI0(void)
+{
+    dspi_master_config_t masterConfig;
+
+    DSPI_MasterGetDefaultConfig(&masterConfig);
+    DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
+    DSPI_MasterTransferCreateHandle(SPI0, &g_dspiHandle,
+    		dspi_master_transfer_callback, NULL);
+
+    LCDNokia_init();
+    LCDNokia_clear();
+
+	return (kStatus_Success);
+}
+
 
 void LCDNokia_init(void) {
 
@@ -137,9 +167,9 @@ void LCDNokia_init(void) {
 	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
 	GPIO_PinInit(GPIOD, RESET_PIN, &pinControlRegister);
 
-	GPIO_PortClear(GPIOD, 1<<RESET_PIN);
+	GPIO_PortClear(GPIOD, BIT_RESET);
 	LCD_delay();
-	GPIO_SetPinsOutput(GPIOD, 1<<RESET_PIN);
+	GPIO_SetPinsOutput(GPIOD, BIT_RESET);
 	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
 	LCDNokia_writeByte(LCD_CMD, 0xBF); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
@@ -147,32 +177,6 @@ void LCDNokia_init(void) {
 
 	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
 	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
-
-#if TEST
-
-	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
-
-	GPIO_clockGating(GPIOD);
-	GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,DATA_OR_CMD_PIN);
-	GPIO_pinControlRegister(GPIOD,BIT3,&pinControlRegister);
-
-	GPIO_clockGating(GPIOD);
-	GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,RESET_PIN);
-	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);
-  //Configure control pins
-
-	GPIO_clearPIN(GPIOD, RESET_PIN);
-	LCD_delay();
-	GPIO_setPIN(GPIOD, RESET_PIN);
-	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
-	LCDNokia_writeByte(LCD_CMD, 0xBF); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
-	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
-	LCDNokia_writeByte(LCD_CMD, 0x14); //LCD bias mode 1:48: Try 0x13 or 0x14
-
-	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
-	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
-#endif
-
 }
 
 void LCDNokia_bitmap(const uint8_t* my_array){
@@ -188,20 +192,22 @@ void LCDNokia_bitmap(const uint8_t* my_array){
 
 void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 {
+	g_receiveXDspi.txData = &data;
+	g_receiveXDspi.dataSize = sizeof(data);
+	g_receiveXDspi.configFlags = kDSPI_MasterCtar0;
+
 	if(DataOrCmd)
 	{
-		GPIO_SetPinsOutput(GPIOD, 1<<DATA_OR_CMD_PIN);
-		//GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
+		GPIO_SetPinsOutput(GPIOD, BIT_DATA);
 	}
 	else
 	{
-		GPIO_PortClear(GPIOD, 1<<DATA_OR_CMD_PIN);
-		//GPIO_clearPIN(GPIOD, DATA_OR_CMD_PIN);
+		GPIO_PortClear(GPIOD, BIT_DATA);
 	}
 
 	DSPI_StartTransfer(SPI0);
-	//DSPI_MasterWriteDataBlocking();
-	DSPI_MasterWriteCommandDataBlocking(SPI0,(uint32_t)data);
+	DSPI_MasterTransferNonBlocking(SPI0, &g_dspiHandle,
+			&g_receiveXDspi);
 	DSPI_StopTransfer(SPI0);
 
 #if TEST

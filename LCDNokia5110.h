@@ -26,6 +26,9 @@ typedef struct{
 	uint8_t realDigit[7];
 }formatASCII;
 
+status_t init_SPI0(void);
+
+
 /*It configures the LCD*/
 void LCDNokia_init(void);
 

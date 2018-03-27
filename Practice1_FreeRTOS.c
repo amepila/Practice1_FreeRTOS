@@ -51,16 +51,11 @@
 #include "Task.h"
 
 #define TEST			(0)
-#define CODE_SPI 		(0)
 
 #define BIT2	(2)
 #define BIT5	(5)
 #define BIT7	(7)
 #define BIT0	(0)
-
-SemaphoreHandle_t g_semaphore_test;
-EventGroupHandle_t g_button_events;
-SemaphoreHandle_t g_mutex_uart0;
 
 /**Set of pin of Buttons**/
 const Button_ConfigType Buttons_Config[4] =
@@ -71,8 +66,8 @@ const Button_ConfigType Buttons_Config[4] =
 		{PORT_C,BIT0}   /**Button 4**/
 };
 
-int main(void) {
-
+int main(void)
+{
   	/* Init board hardware. */
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
@@ -80,41 +75,33 @@ int main(void) {
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
 
+    uint8_t flag_PrintLCD;
+	//Buttons_init(&Buttons_Config);
     init_UART0();
+    init_UART1();
+    init_SPI0();
 
 	NVIC_EnableIRQ(PORTC_IRQn);
 	NVIC_SetPriority(PORTC_IRQn,5);
 
-	g_button_events = xEventGroupCreate();
-	g_semaphore_test = xSemaphoreCreateBinary();
-	g_mutex_uart0 = xSemaphoreCreateMutex();
-
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	vTaskStartScheduler();
+	//vTaskStartScheduler();
 
-#if (TEST & CODE_SPI)
-
-    dspi_master_config_t masterConfig;
-    bool_t flag_PrinLCD = 1;
-
-    DSPI_MasterGetDefaultConfig(&masterConfig);
-    DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
-
-    LCDNokia_init();
-    LCDNokia_clear();
-
-#endif
-
+    flag_PrintLCD = 1;
     for(;;)
     {
-#if (TES & CODE_SPI0)
+    	if(1 == flag_PrintLCD)
+    	{
+    		LCDNokia_sendChar('A');
+    		LCDNokia_printValue(5);
+    		LCDNokia_printValue(4);
+    		LCDNokia_printValue(3);
+    		LCDNokia_printValue(2);
+    		LCDNokia_printValue(1);
+    		LCDNokia_printValue(0);
 
-    if(1 == flag_PrintLCD)
-    {
-    	LCDNokia_printValue(5);
-    	flag_PrintLCD
-    }
-#endif
-    }
+    		flag_PrintLCD = 1;
+    	}
+	}
     return 0 ;
 }
