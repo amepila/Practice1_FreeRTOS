@@ -9,6 +9,8 @@
 #include "fsl_uart.h"
 #include "fsl_dspi.h"
 #include "PeripheralFunctions.h"
+#include "E2PROM.h"
+#include "RTC.h"
 
 /**ASCII table such as reference**/
 
@@ -136,9 +138,10 @@ void setTimeLCD(Time_Type time)
 		time.modifyDate = 0;
 	}
 }
-
+#if 0
 Time_Type getTime(void)
 {
+
 	Time_Type realTime;
 	/**Separate the digits of hour*/
 	uint32_t decHour;
@@ -188,6 +191,7 @@ Time_Type getTime(void)
 	realTime.date.day = decDay + unDay;
 
 	return (realTime);
+
 }
 
 void printTimeLCD(Time_Type time)
@@ -302,7 +306,7 @@ void printTimeLCD(Time_Type time)
 	LCDNokia_printValue(BCDYearDec(readRTC_year()));
 	LCDNokia_printValue(BCDUni(readRTC_year()));
 }
-
+#endif
 void printHourUART(Time_Type time)
 {
 	uint32_t partDecHour;
@@ -359,66 +363,66 @@ void printHourUART(Time_Type time)
 	/**Verified if the data is different that zero*/
 	if('0' == date[0])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[0], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[0], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[1])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[1], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[1], sizeof(uint8_t));
 	}
-    UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, (uint8_t*)ASCII_DOUBLEPOINT, sizeof(uint8_t));
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[2])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[2], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[2], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[3])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[3], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[3], sizeof(uint8_t));
 	}
-    UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, (uint8_t*)ASCII_DOUBLEPOINT, sizeof(uint8_t));
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[4])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[4], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[4], sizeof(uint8_t));
 	}
 
 	/**Verified if the data is different that zero*/
 	if(0 == date[5])
 	{
-	    UART_WriteBlocking(UART0, ASCII_0, sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, (uint8_t*)ASCII_0, sizeof(uint8_t));
 	}
 	else
 	{
-	    UART_WriteBlocking(UART0, date[5], sizeof(uint8_t));
+	    UART_WriteBlocking(UART0, &date[5], sizeof(uint8_t));
 	}
 
-    UART_WriteBlocking(UART0, "\033[10;36H", sizeof(uint8_t));
+    UART_WriteBlocking(UART0, (uint8_t*)"\033[10;36H", sizeof(uint8_t));
 }
 
 void printDateUART(Time_Type time)
@@ -460,14 +464,14 @@ void printDateUART(Time_Type time)
 	date[5] = '0' + partUnYear;
 
 	/**Print the date*/
-    UART_WriteBlocking(UART0, date[0], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, date[1], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, ASCII_DIAG, sizeof(uint8_t));
-    UART_WriteBlocking(UART0, date[2], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, date[3], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, ASCII_DIAG, sizeof(uint8_t));
-    UART_WriteBlocking(UART0, date[4], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, date[5], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[0], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[1], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, (uint8_t*)ASCII_DIAG, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[2], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[3], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, (uint8_t*)ASCII_DIAG, sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[4], sizeof(uint8_t));
+    UART_WriteBlocking(UART0, &date[5], sizeof(uint8_t));
 
 }
 

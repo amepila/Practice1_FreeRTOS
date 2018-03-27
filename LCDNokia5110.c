@@ -209,13 +209,6 @@ void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 	DSPI_MasterTransferNonBlocking(SPI0, &g_dspiHandle,
 			&g_receiveXDspi);
 	DSPI_StopTransfer(SPI0);
-
-#if TEST
-	SPI_startTranference(SPI_0);
-	SPI_sendOneByte(data);
-	SPI_stopTranference(SPI_0);
-#endif
-
 }
 
 void LCDNokia_sendChar(uint8_t character)

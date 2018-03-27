@@ -28,7 +28,6 @@
 #include "event_groups.h"
 #include "Task.h"
 
-
 #define BUTTON_1	(1<<2)
 #define BUTTON_2	(1<<5)
 #define BUTTON_3	(1<<7)
@@ -74,6 +73,7 @@
 #define LENGHT_UART				(10)
 
 SemaphoreHandle_t g_semaphore_Init;
+QueueHandle_t g_time_queue;
 
 EventGroupHandle_t g_button_events;
 EventGroupHandle_t g_eventsReadI2C;
@@ -92,6 +92,10 @@ volatile bool rx0Finished;
 uart_handle_t g_uart1Handle;
 uart_transfer_t g_receiveXUart1;
 volatile bool rx1Finished;
+
+/**ASCII Code to Esc and CR*/
+const uint8_t ESC = 27;
+const uint8_t CR = 13;
 
 void PORTC_IRQHandler()
 {
@@ -153,8 +157,6 @@ static void uart1_transfer_callback(UART_Type *base, uart_handle_t *handle,
 	}
 }
 
-
-
 status_t init_UART0(void)
 {
     uart_config_t uart0Config;
@@ -203,6 +205,31 @@ status_t init_UART1(void)
 
 void taskINIT(void *arg)
 {
+	/**Structure with the time*/
+	Time_Type *rtcTime;
+
+	rtcTime = pvPortMalloc(sizeof(Time_Type));
+
+	/**Set of initial Clock**/
+	rtcTime->hour.format = FORMAT_24H;
+	rtcTime->hour.period = NON_PERIOD;
+	rtcTime->modifyTime = 1;
+	rtcTime->modifyDate = 1;
+
+	/**Set the initial hour**/
+	rtcTime->hour.hour = 1;
+	rtcTime->hour.minutes = 0;
+	rtcTime->hour.seconds = 0;
+
+	/**Set the initial date**/
+	rtcTime->date.day = 27;
+	rtcTime->date.month = 3;
+	rtcTime->date.year = 2018;
+
+	/**Send the struct to RTC**/
+	setTimeLCD(*rtcTime);
+
+
 	g_semaphore_Init = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
 
@@ -521,8 +548,8 @@ void taskMENU_Menu(void *arg)
 {
 	xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
+	bool lockRTC = false;
 	uint8_t data[LENGHT_UART] = {0};
-	uint8_t counter1 = 0;
 
 	g_receiveXUart0.data = data;
 	g_receiveXUart0.dataSize = sizeof(data);
@@ -532,6 +559,8 @@ void taskMENU_Menu(void *arg)
 
 	for(;;)
 	{
+
+
 		UART_TransferReceiveNonBlocking(UART0,
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)

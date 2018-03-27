@@ -50,8 +50,6 @@
 #include "event_groups.h"
 #include "Task.h"
 
-#define TEST			(0)
-
 #define BIT2	(2)
 #define BIT5	(5)
 #define BIT7	(7)
@@ -75,33 +73,23 @@ int main(void)
   	/* Init FSL debug console. */
     BOARD_InitDebugConsole();
 
-    uint8_t flag_PrintLCD;
-	//Buttons_init(&Buttons_Config);
+	/**Configurations of devices**/
+	Buttons_init(Buttons_Config);
     init_UART0();
     init_UART1();
     init_SPI0();
 
+	/***Enable IRQ's***/
 	NVIC_EnableIRQ(PORTC_IRQn);
+	/**Set the priority**/
 	NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	//vTaskStartScheduler();
+	vTaskStartScheduler();
 
-    flag_PrintLCD = 1;
     for(;;)
     {
-    	if(1 == flag_PrintLCD)
-    	{
-    		LCDNokia_sendChar('A');
-    		LCDNokia_printValue(5);
-    		LCDNokia_printValue(4);
-    		LCDNokia_printValue(3);
-    		LCDNokia_printValue(2);
-    		LCDNokia_printValue(1);
-    		LCDNokia_printValue(0);
-
-    		flag_PrintLCD = 1;
-    	}
+		//LCDNokia_sendChar('A');
 	}
     return 0 ;
 }
