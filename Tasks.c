@@ -38,6 +38,16 @@
 #define EVENT_BUTTON3	(1<<2)
 #define EVENT_BUTTON4	(1<<3)
 
+#define EVENT_READ_MENU			(1<<0)
+#define EVENT_WRITE_MENU		(1<<1)
+#define EVENT_HOUR_MENU			(1<<2)
+#define EVENT_DATE_MENU			(1<<3)
+#define EVENT_FORMAT_MENU		(1<<4)
+#define EVENT_RHOUR_MENU		(1<<5)
+#define EVENT_RDATE_MENU		(1<<6)
+#define EVENT_TERMINAL_MENU		(1<<7)
+#define EVENT_ECO_MENU			(1<<8)
+
 #define EVENT_R12C_ADDRESS		(1<<0)
 #define EVENT_R12C_LENGHT		(1<<1)
 #define EVENT_R12C_DATA			(1<<2)
@@ -70,11 +80,14 @@
 #define EVENT_ECO_TRANS			(1<<0)
 #define EVENT_ECO_FINAL			(1<<1)
 
-#define LENGHT_UART				(10)
+#define LENGHT_UART				(2)
+#define TRUE					(1)
+#define FALSE					(0)
 
 SemaphoreHandle_t g_semaphore_Init;
-QueueHandle_t g_time_queue;
+QueueHandle_t g_timeQueue_Main;
 
+EventGroupHandle_t g_eventsMenus;
 EventGroupHandle_t g_button_events;
 EventGroupHandle_t g_eventsReadI2C;
 EventGroupHandle_t g_eventsWriteI2C;
@@ -92,6 +105,30 @@ volatile bool rx0Finished;
 uart_handle_t g_uart1Handle;
 uart_transfer_t g_receiveXUart1;
 volatile bool rx1Finished;
+
+/**Structure with the time*/
+Time_Type g_Time =
+{
+		{1, 0, 0, FORMAT_24H, NON_PERIOD},
+		{2018, 3, 28},
+		1,
+		1
+};
+
+Time_Type *rtcTime = &g_Time;
+
+typedef enum
+{
+	ASCII_1 = 49,
+	ASCII_2 = 50,
+	ASCII_3 = 51,
+	ASCII_4 = 52,
+	ASCII_5 = 53,
+	ASCII_6 = 54,
+	ASCII_7 = 55,
+	ASCII_8 = 56,
+	ASCII_9 = 57
+}g_codeASCII_num;
 
 /**ASCII Code to Esc and CR*/
 const uint8_t ESC = 27;
@@ -202,37 +239,13 @@ status_t init_UART1(void)
 	return (kStatus_Success);
 }
 
-
 void taskINIT(void *arg)
 {
-	/**Structure with the time*/
-	Time_Type *rtcTime;
-
-	rtcTime = pvPortMalloc(sizeof(Time_Type));
-
-	/**Set of initial Clock**/
-	rtcTime->hour.format = FORMAT_24H;
-	rtcTime->hour.period = NON_PERIOD;
-	rtcTime->modifyTime = 1;
-	rtcTime->modifyDate = 1;
-
-	/**Set the initial hour**/
-	rtcTime->hour.hour = 1;
-	rtcTime->hour.minutes = 0;
-	rtcTime->hour.seconds = 0;
-
-	/**Set the initial date**/
-	rtcTime->date.day = 27;
-	rtcTime->date.month = 3;
-	rtcTime->date.year = 2018;
-
-	/**Send the struct to RTC**/
-	setTimeLCD(*rtcTime);
-
-
 	g_semaphore_Init = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
+	g_timeQueue_Main = xQueueCreate(1,sizeof(Time_Type*));
 
+	g_eventsMenus = xEventGroupCreate();
 	g_eventsReadI2C = xEventGroupCreate();
 	g_eventsWriteI2C = xEventGroupCreate();
 	g_eventsSetHour = xEventGroupCreate();
@@ -244,8 +257,10 @@ void taskINIT(void *arg)
 
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+	xTaskCreate(taskMENU_Read, "Read_Menu",
+			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 
-#if 0
+
 	xTaskCreate(taskREADI2C_Address, "ReadI2C_Address",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskREADI2C_Lenght, "ReadI2C_Lenght",
@@ -254,7 +269,7 @@ void taskINIT(void *arg)
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskREADI2C_FinalRead, "ReadI2C_Final",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-
+#if 0
 	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Address",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskWRITEI2C_DataWrite, "WriteI2C_Write",
@@ -303,8 +318,7 @@ void taskINIT(void *arg)
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 
 
-	xTaskCreate(taskMENU_Read, "Read_Menu",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+
 	xTaskCreate(taskMENU_Write, "Write_Menu",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
@@ -333,37 +347,91 @@ void taskINIT(void *arg)
 
 void taskREADI2C_Address(void *arg)
 {
+	uint8_t counter = 0;
+	uint8_t data[5] = {0};
+	uint32_t realAddress = 0;
+	uint8_t phase;
+
 	for(;;)
 	{
-
-
+		UART_TransferReceiveNonBlocking(UART0,
+				&g_uart0Handle, &g_receiveXUart0, NULL);
+		while (!rx0Finished)
+		{
+			for(counter = 0; counter < 5; counter++)
+			{
+				if(counter < 4)
+				{
+					UART_WriteBlocking(UART0,
+							&data[counter], sizeof(uint8_t));
+				}
+			}
+		}
+		realAddress = Convert_numberASCIItoDATA(&data);
+		phase = 1;
+		/**Send realAddress, phase to the queue*/
 	}
 }
 
 void taskREADI2C_Lenght(void *arg)
 {
+	uint8_t counter = 0;
+	uint8_t data[3] = {0};
+	uint32_t realLength = 0;
+	uint8_t phase;
 
 	for(;;)
 	{
-
+		UART_TransferReceiveNonBlocking(UART0,
+				&g_uart0Handle, &g_receiveXUart0, NULL);
+		while (!rx0Finished)
+		{
+			for(counter = 0; counter < 3; counter++)
+			{
+				if(counter < 2)
+				{
+					UART_WriteBlocking(UART0,
+							&data[counter], sizeof(uint8_t));
+				}
+			}
+		}
+		realLength = Convert_numberASCIItoDATA(&data);
+		phase = 2;
+		/**Send realLength, phase to the queue*/
 	}
 }
 
 void taskREADI2C_Data(void *arg)
 {
+	uint8_t counterChar;
+	uint32_t realLength;
+	uint32_t realAddress;
+	uint8_t phase = 3;
 
 	for(;;)
 	{
+		/**realLength, realAddress received by queue*/
 
+		for(counterChar = 0; counterChar < realLength; counterChar++)
+		{
+#if 0
+			UART_WriteBlocking(UART0,
+			readMemory(realAddress + counterChar),
+			sizeof(uint8_t));
+			E2PROM(6500);
+#endif
+		}
 	}
 }
 
 
 void taskREADI2C_FinalRead(void *arg)
 {
+
 	for(;;)
 	{
-
+		/**Arrive of the Read Menu*/
+		/**And go to Main Menu*/
 	}
 }
 
@@ -548,33 +616,156 @@ void taskMENU_Menu(void *arg)
 {
 	xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
-	bool lockRTC = false;
-	uint8_t data[LENGHT_UART] = {0};
+	uint8_t data[2] = {0};
+	uint8_t lock = FALSE;
+	uint8_t lockMenu = FALSE;
 
 	g_receiveXUart0.data = data;
 	g_receiveXUart0.dataSize = sizeof(data);
 	rx0Finished = false;
 
-	menu_Main0();
+	/**Send the struct to RTC**/
+	//setTimeLCD(*rtcTime);
 
 	for(;;)
 	{
+		if(FALSE == lockMenu)
+		{
+			menu_Main0();
+			lockMenu = TRUE;
+		}
 
+		/**Print the time in LCD*/
+		//printTimeLCD(*rtcTime);
+
+		xEventGroupGetBits(g_eventsMenus);
 
 		UART_TransferReceiveNonBlocking(UART0,
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)
 		{
+			if((FALSE == lock) && (data[0] != 0))
+			{
+			    UART_WriteBlocking(UART0, &data[0],
+			    		sizeof(uint8_t));
+			    lock = TRUE;
+			}
+		}
+
+		if(CR == data[1])
+		{
+			if(ASCII_1 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_READ_MENU);
+			}
+			if(ASCII_2 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_WRITE_MENU);
+			}
+			if(ASCII_3 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_HOUR_MENU);
+			}
+			if(ASCII_4 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_DATE_MENU);
+			}
+			if(ASCII_5 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_FORMAT_MENU);
+			}
+			if(ASCII_6 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_RHOUR_MENU);
+			}
+			if(ASCII_7 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_RHOUR_MENU);
+			}
+			if(ASCII_8 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_TERMINAL_MENU);
+			}
+			if(ASCII_9 == data[0])
+			{
+				data[0] = 0;
+				data[1] = 0;
+				xEventGroupSetBits(g_eventsMenus,
+						EVENT_ECO_MENU);
+			}
 		}
 	}
 }
 
 void taskMENU_Read(void *arg)
 {
+	uint8_t data[2] = {0};
+	uint32_t phase = 0;
+	uint32_t lockUART0 = FALSE;
+	uint8_t flagAddress = FALSE;
+	uint8_t flagUART0 = FALSE;
 
 	for(;;)
 	{
+		xEventGroupWaitBits(g_eventsMenus,
+				(EVENT_READ_MENU), pdTRUE,
+				pdTRUE, portMAX_DELAY);
 
+		if(false == flagUART0)
+		{
+			menu_ReadI2C(phase);
+		}
+
+		if(1 == phase)
+		{
+			if(FALSE == flagAddress)
+			{
+				/**save the address of queue*/
+				flagAddress = TRUE;
+			}
+		}
+
+		if(2 == phase)
+		{
+			/**save the length of queue*/
+
+		}
+
+		UART_TransferReceiveNonBlocking(UART0,
+				&g_uart0Handle, &g_receiveXUart0, NULL);
+		while (!rx0Finished)
+		{
+			if((FALSE == lockUART0) && (data[0] != 0))
+			{
+			    UART_WriteBlocking(UART0, &data[0],
+			    		sizeof(uint8_t));
+			    lockUART0 = true;
+			}
+		}
 	}
 }
 

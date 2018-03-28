@@ -40,7 +40,6 @@ typedef enum{
 static Time_Type Clock;
 const uint32_t Medium_Hour = (0x12U);
 
-
 void delay(uint32_t delay)
 {
 	volatile uint32_t counter;
