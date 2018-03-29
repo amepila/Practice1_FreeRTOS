@@ -132,15 +132,36 @@ static void dspi_master_transfer_callback(SPI_Type *base,
 
 status_t init_SPI0(void)
 {
+	CLOCK_EnableClock(kCLOCK_PortD);
+	CLOCK_EnableClock(kCLOCK_Spi0);
+
+	port_pin_config_t pinConfig =
+	{
+			kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
+			kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt2,
+			kPORT_UnlockRegister
+	};
+
+	gpio_pin_config_t pinControlRegister =
+	{kGPIO_DigitalOutput, 1};
+
+	GPIO_PinInit(GPIOD, 1, &pinControlRegister);
+	GPIO_PinInit(GPIOD, 2, &pinControlRegister);
+
+	PORT_SetPinConfig(PORTD, 1, &pinConfig);
+	PORT_SetPinConfig(PORTD, 2, &pinConfig);
+
     dspi_master_config_t masterConfig;
 
     DSPI_MasterGetDefaultConfig(&masterConfig);
+    masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveLow;
+
     DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
     DSPI_MasterTransferCreateHandle(SPI0, &g_dspiHandle,
     		dspi_master_transfer_callback, NULL);
 
     LCDNokia_init();
-    //LCDNokia_clear();
+    LCDNokia_clear();
 
 	return (kStatus_Success);
 }
@@ -148,8 +169,8 @@ status_t init_SPI0(void)
 
 void LCDNokia_init(void) {
 
-	CLOCK_EnableClock(kCLOCK_PortD);
-	CLOCK_EnableClock(kCLOCK_Spi0);
+	//CLOCK_EnableClock(kCLOCK_PortD);
+	//CLOCK_EnableClock(kCLOCK_Spi0);
 
 	port_pin_config_t pinConfig =
 	{
@@ -207,6 +228,9 @@ void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 
 	DSPI_MasterTransferNonBlocking(SPI0, &g_dspiHandle,
 			&g_receiveXDspi);
+	while(!masterFinished)
+	{
+	}
 }
 
 void LCDNokia_sendChar(uint8_t character)

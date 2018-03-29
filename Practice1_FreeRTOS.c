@@ -80,18 +80,17 @@ int main(void)
     init_SPI0();
 
 	/***Enable IRQ's***/
-	//NVIC_EnableIRQ(PORTC_IRQn);
+	NVIC_EnableIRQ(PORTC_IRQn);
 	/**Set the priority**/
-	//NVIC_SetPriority(PORTC_IRQn,5);
+	NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	//vTaskStartScheduler();
+	vTaskStartScheduler();
 
-	uint8_t data = 'A';
-
+	//uint8_t data = 'A';
     for(;;)
     {
-    	LCDNokia_sendChar(data);
+    	//LCDNokia_sendChar(data);
 	}
     return 0 ;
 }
