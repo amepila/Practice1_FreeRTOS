@@ -85,11 +85,13 @@ int main(void)
 	//NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	vTaskStartScheduler();
+	//vTaskStartScheduler();
+
+	uint8_t data = 'A';
 
     for(;;)
     {
-		//LCDNokia_sendChar('A');
+    	LCDNokia_sendChar(data);
 	}
     return 0 ;
 }

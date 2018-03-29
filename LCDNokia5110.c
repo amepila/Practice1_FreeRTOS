@@ -140,7 +140,7 @@ status_t init_SPI0(void)
     		dspi_master_transfer_callback, NULL);
 
     LCDNokia_init();
-    LCDNokia_clear();
+    //LCDNokia_clear();
 
 	return (kStatus_Success);
 }
@@ -158,14 +158,14 @@ void LCDNokia_init(void) {
 			kPORT_UnlockRegister
 	};
 
-	PORT_SetPinConfig(PORTD, DATA_OR_CMD_PIN, &pinConfig);
-	PORT_SetPinConfig(PORTD, RESET_PIN, &pinConfig);
-
 	gpio_pin_config_t pinControlRegister =
 	{kGPIO_DigitalOutput, 1};
 
 	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &pinControlRegister);
 	GPIO_PinInit(GPIOD, RESET_PIN, &pinControlRegister);
+
+	PORT_SetPinConfig(PORTD, DATA_OR_CMD_PIN, &pinConfig);
+	PORT_SetPinConfig(PORTD, RESET_PIN, &pinConfig);
 
 	GPIO_PortClear(GPIOD, BIT_RESET);
 	LCD_delay();
@@ -194,7 +194,7 @@ void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 {
 	g_receiveXDspi.txData = &data;
 	g_receiveXDspi.dataSize = sizeof(data);
-	g_receiveXDspi.configFlags = kDSPI_MasterCtar0;
+	g_receiveXDspi.configFlags = kDSPI_MasterCtar0|kDSPI_MasterPcs0;
 
 	if(DataOrCmd)
 	{
@@ -205,10 +205,8 @@ void LCDNokia_writeByte(uint8_t DataOrCmd, uint8_t data)
 		GPIO_PortClear(GPIOD, BIT_DATA);
 	}
 
-	DSPI_StartTransfer(SPI0);
 	DSPI_MasterTransferNonBlocking(SPI0, &g_dspiHandle,
 			&g_receiveXDspi);
-	DSPI_StopTransfer(SPI0);
 }
 
 void LCDNokia_sendChar(uint8_t character)

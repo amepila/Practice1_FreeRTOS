@@ -48,10 +48,10 @@
 #define EVENT_TERMINAL_MENU		(1<<7)
 #define EVENT_ECO_MENU			(1<<8)
 
-#define EVENT_R12C_ADDRESS		(1<<0)
-#define EVENT_R12C_LENGHT		(1<<1)
-#define EVENT_R12C_DATA			(1<<2)
-#define EVENT_R12C_FINAL		(1<<0)
+#define EVENT_RI2C_ADDRESS		(1<<0)
+#define EVENT_RI2C_LENGTH		(1<<1)
+#define EVENT_RI2C_DATA			(1<<2)
+#define EVENT_RI2C_FINAL		(1<<3)
 
 #define EVENT_WI2C_ADDRESS		(1<<0)
 #define EVENT_WI2C_DATA			(1<<1)
@@ -83,9 +83,11 @@
 #define LENGHT_UART				(2)
 #define TRUE					(1)
 #define FALSE					(0)
+#define QUEUE_ELEMENTS			(1)
 
 SemaphoreHandle_t g_semaphore_Init;
-QueueHandle_t g_timeQueue_Main;
+QueueHandle_t g_Queue_ReadI2C;
+QueueHandle_t g_QueueFlags_ReadI2C;
 
 EventGroupHandle_t g_eventsMenus;
 EventGroupHandle_t g_button_events;
@@ -105,6 +107,20 @@ volatile bool rx0Finished;
 uart_handle_t g_uart1Handle;
 uart_transfer_t g_receiveXUart1;
 volatile bool rx1Finished;
+
+typedef enum
+{
+	ADDRESS,
+	LENGTH,
+	DATA
+}DataType_RI2C;
+
+typedef struct
+{
+	uint32_t data;
+	uint32_t phase;
+	DataType_RI2C type;
+}DataTransfer_ReadI2C_Type;
 
 /**Structure with the time*/
 Time_Type g_Time =
@@ -230,7 +246,7 @@ status_t init_UART1(void)
 
     uart1Config.enableRx = true;
     uart1Config.enableTx = true;
-    uart1Config.baudRate_Bps = 38400U;
+    uart1Config.baudRate_Bps = 9600U;
 
     UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
     UART_TransferCreateHandle(UART1, &g_uart1Handle,
@@ -243,7 +259,27 @@ void taskINIT(void *arg)
 {
 	g_semaphore_Init = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
-	g_timeQueue_Main = xQueueCreate(1,sizeof(Time_Type*));
+
+	g_Queue_ReadI2C = xQueueCreate(3,
+			sizeof(DataTransfer_ReadI2C_Type));
+#if 0
+	g_Queue_WriteI2C = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_SetHour = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_SetDate = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_Format = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_ReadHour = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_ReadDate = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_WriteI2C = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+	g_Queue_Eco = xQueueCreate(QUEUE_ELEMENTS,
+			sizeof(DataTransfer_Type));
+#endif
 
 	g_eventsMenus = xEventGroupCreate();
 	g_eventsReadI2C = xEventGroupCreate();
@@ -351,9 +387,19 @@ void taskREADI2C_Address(void *arg)
 	uint8_t data[5] = {0};
 	uint32_t realAddress = 0;
 	uint8_t phase;
+	DataTransfer_ReadI2C_Type *data_queue;
+
+	g_receiveXUart0.data = data;
+	g_receiveXUart0.dataSize = sizeof(data);
+	rx0Finished = false;
 
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsReadI2C,
+				(EVENT_RI2C_ADDRESS), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+
 		UART_TransferReceiveNonBlocking(UART0,
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)
@@ -367,9 +413,17 @@ void taskREADI2C_Address(void *arg)
 				}
 			}
 		}
-		realAddress = Convert_numberASCIItoDATA(&data);
+		realAddress = Convert_numberASCIItoDATA(data);
 		phase = 1;
-		/**Send realAddress, phase to the queue*/
+
+		data_queue = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
+		data_queue->data = realAddress;
+		data_queue->phase = phase;
+		data_queue->type = ADDRESS;
+		xQueueSend(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+
+		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
+		xEventGroupGetBits(g_eventsMenus);
 	}
 }
 
@@ -379,9 +433,19 @@ void taskREADI2C_Lenght(void *arg)
 	uint8_t data[3] = {0};
 	uint32_t realLength = 0;
 	uint8_t phase;
+	DataTransfer_ReadI2C_Type *data_queue;
+
+	g_receiveXUart0.data = data;
+	g_receiveXUart0.dataSize = sizeof(data);
+	rx0Finished = false;
 
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsReadI2C,
+				(EVENT_RI2C_LENGTH), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+
 		UART_TransferReceiveNonBlocking(UART0,
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)
@@ -395,9 +459,17 @@ void taskREADI2C_Lenght(void *arg)
 				}
 			}
 		}
-		realLength = Convert_numberASCIItoDATA(&data);
+		realLength = Convert_numberASCIItoDATA(data);
 		phase = 2;
-		/**Send realLength, phase to the queue*/
+
+		data_queue = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
+		data_queue->data = realLength;
+		data_queue->phase = phase;
+		data_queue->type = LENGTH;
+		xQueueSend(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+
+		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
+		xEventGroupGetBits(g_eventsMenus);
 	}
 }
 
@@ -407,11 +479,36 @@ void taskREADI2C_Data(void *arg)
 	uint32_t realLength;
 	uint32_t realAddress;
 	uint8_t phase = 3;
+	DataTransfer_ReadI2C_Type *data_queue;
+
+	const uint8_t test[8] = "Hola\n";
 
 	for(;;)
 	{
-		/**realLength, realAddress received by queue*/
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsReadI2C,
+				(EVENT_RI2C_DATA), pdTRUE,
+				pdTRUE, portMAX_DELAY);
 
+		/**Queue is received with the address and length*/
+		do
+		{
+			xQueueReceive(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+			switch(data_queue->type)
+			{
+			case (ADDRESS):
+					realAddress = data_queue->data;
+				break;
+			case (LENGTH):
+					realLength = data_queue->data;
+				break;
+			default:
+				break;
+			}
+		}
+		while(0 != uxQueueMessagesWaiting(g_Queue_ReadI2C));
+
+		/**Print the data memory*/
 		for(counterChar = 0; counterChar < realLength; counterChar++)
 		{
 #if 0
@@ -421,6 +518,17 @@ void taskREADI2C_Data(void *arg)
 			E2PROM(6500);
 #endif
 		}
+		/**Testing*/
+		UART_WriteBlocking(UART0, test, sizeof(test));
+
+		/**Send the final element of the queue*/
+		data_queue = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
+		data_queue->phase = phase;
+		data_queue->type = DATA;
+		xQueueSend(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+
+		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
+		xEventGroupGetBits(g_eventsMenus);
 	}
 }
 
@@ -430,8 +538,12 @@ void taskREADI2C_FinalRead(void *arg)
 
 	for(;;)
 	{
-		/**Arrive of the Read Menu*/
-		/**And go to Main Menu*/
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsReadI2C,
+				(EVENT_RI2C_FINAL), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
 
@@ -614,8 +726,6 @@ void taskECO_FinalEco(void *arg)
 /**********************************************************/
 void taskMENU_Menu(void *arg)
 {
-	xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
-
 	uint8_t data[2] = {0};
 	uint8_t lock = FALSE;
 	uint8_t lockMenu = FALSE;
@@ -623,21 +733,23 @@ void taskMENU_Menu(void *arg)
 	g_receiveXUart0.data = data;
 	g_receiveXUart0.dataSize = sizeof(data);
 	rx0Finished = false;
-
+#if 0
 	/**Send the struct to RTC**/
-	//setTimeLCD(*rtcTime);
-
+	setTimeLCD(*rtcTime);
+#endif
 	for(;;)
 	{
+		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
+
 		if(FALSE == lockMenu)
 		{
 			menu_Main0();
-			lockMenu = TRUE;
+			//lockMenu = TRUE;
 		}
-
+#if 0
 		/**Print the time in LCD*/
-		//printTimeLCD(*rtcTime);
-
+		printTimeLCD(*rtcTime);
+#endif
 		xEventGroupGetBits(g_eventsMenus);
 
 		UART_TransferReceiveNonBlocking(UART0,
@@ -656,64 +768,46 @@ void taskMENU_Menu(void *arg)
 		{
 			if(ASCII_1 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_READ_MENU);
 			}
 			if(ASCII_2 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_WRITE_MENU);
 			}
 			if(ASCII_3 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_HOUR_MENU);
 			}
 			if(ASCII_4 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_DATE_MENU);
 			}
 			if(ASCII_5 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_FORMAT_MENU);
 			}
 			if(ASCII_6 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_RHOUR_MENU);
 			}
 			if(ASCII_7 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_RHOUR_MENU);
 			}
 			if(ASCII_8 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_TERMINAL_MENU);
 			}
 			if(ASCII_9 == data[0])
 			{
-				data[0] = 0;
-				data[1] = 0;
 				xEventGroupSetBits(g_eventsMenus,
 						EVENT_ECO_MENU);
 			}
@@ -723,48 +817,67 @@ void taskMENU_Menu(void *arg)
 
 void taskMENU_Read(void *arg)
 {
-	uint8_t data[2] = {0};
 	uint32_t phase = 0;
-	uint32_t lockUART0 = FALSE;
-	uint8_t flagAddress = FALSE;
-	uint8_t flagUART0 = FALSE;
+	uint8_t lockAddress = FALSE;
+	uint8_t lockLength = FALSE;
+	uint8_t lockData = FALSE;
+	DataTransfer_ReadI2C_Type *data_queue;
 
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_READ_MENU), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
-		if(false == flagUART0)
-		{
-			menu_ReadI2C(phase);
-		}
+		/**Print the menu by parts*/
+		menu_ReadI2C(phase);
 
+		/**Queue is received to get the phase*/
+		do
+		{
+			xQueueReceive(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+			if((ADDRESS == data_queue->type) && (FALSE == lockAddress))
+			{
+				phase = data_queue->phase;
+				lockAddress = TRUE;
+			}
+			if((LENGTH == data_queue->type) && (FALSE == lockLength))
+			{
+				phase = data_queue->phase;
+				lockLength = TRUE;
+			}
+			if((DATA == data_queue->type) && (FALSE == lockData))
+			{
+				phase = data_queue->phase;
+				lockData = TRUE;
+			}
+		}
+		while(0 != uxQueueMessagesWaiting(g_Queue_ReadI2C));
+
+
+		/**Set the flag event to jump to the next task*/
+		xEventGroupGetBits(g_eventsReadI2C);
+
+		if(0 == phase)
+		{
+			/**Jump to ReadI2C Address*/
+			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_ADDRESS);
+		}
 		if(1 == phase)
 		{
-			if(FALSE == flagAddress)
-			{
-				/**save the address of queue*/
-				flagAddress = TRUE;
-			}
+			/**Jump to ReadI2C Length*/
+			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_LENGTH);
 		}
-
 		if(2 == phase)
 		{
-			/**save the length of queue*/
-
+			/**Jump to ReadI2C Data*/
+			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_DATA);
 		}
-
-		UART_TransferReceiveNonBlocking(UART0,
-				&g_uart0Handle, &g_receiveXUart0, NULL);
-		while (!rx0Finished)
+		if(3 == phase)
 		{
-			if((FALSE == lockUART0) && (data[0] != 0))
-			{
-			    UART_WriteBlocking(UART0, &data[0],
-			    		sizeof(uint8_t));
-			    lockUART0 = true;
-			}
+			/**Jump to ReadI2C Final*/
+			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_FINAL);
 		}
 	}
 }
