@@ -549,17 +549,15 @@ void taskREADI2C_Data(void *arg)
 	}
 }
 
-
 void taskREADI2C_FinalRead(void *arg)
 {
-
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsReadI2C,
 				(EVENT_RI2C_FINAL), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-
+		vPortFree(g_Queue_ReadI2C);
 		xSemaphoreGive(g_semaphore_Init);
 	}
 }
@@ -733,6 +731,7 @@ void taskWRITEI2C_FinalWriteI2C(void *arg)
 				(EVENT_WI2C_FINALI2C), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
+		vPortFree(g_Queue_WriteI2C);
 		xSemaphoreGive(g_semaphore_Init);
 	}
 }
@@ -1041,8 +1040,11 @@ void taskMENU_Write(void *arg)
 {
 	uint8_t phase = 0;
 	uint8_t lockAddress = FALSE;
+	uint8_t lockSize = FALSE;
 	uint8_t lockLength = FALSE;
-	uint8_t counterChar;
+	uint8_t realAddress;
+	uint8_t sizeData;
+	uint8_t data[LENGTH_DATA_MEMORY];
 	DataTransfer_WriteI2C_Type *data_queue;
 
 	for(;;)
@@ -1053,7 +1055,7 @@ void taskMENU_Write(void *arg)
 				pdTRUE, portMAX_DELAY);
 
 		/**Print the menu by parts*/
-		menu_ReadI2C(phase);
+		menu_WriteI2C(phase);
 
 		/**Queue is received to get the phase*/
 		do
@@ -1062,12 +1064,19 @@ void taskMENU_Write(void *arg)
 			if((ADDRESS == data_queue->type) && (FALSE == lockAddress))
 			{
 				phase = data_queue->phase;
+				realAddress = data_queue->address;
 				lockAddress = TRUE;
 			}
-			if((LENGTH == data_queue->type) && (FALSE == lockLength))
+			if((SIZE == data_queue->type) && (FALSE == lockLength))
 			{
 				phase = data_queue->phase;
+				sizeData = data_queue->size;
 				lockLength = TRUE;
+			}
+			if((DATA == data_queue->phase) && (FALSE == lockData))
+			{
+				phase = data_queue->phase;
+				lockData = TRUE;
 			}
 		}
 		while(0 != uxQueueMessagesWaiting(g_Queue_WriteI2C));
@@ -1089,6 +1098,7 @@ void taskMENU_Write(void *arg)
 		{
 			/**Jump to WriteI2C Final*/
 			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_FINAL);
+
 		}
 		if(3 == phase)
 		{
@@ -1100,10 +1110,73 @@ void taskMENU_Write(void *arg)
 
 void taskMENU_SetHour(void *arg)
 {
+	uint8_t phase = 0;
+	uint8_t lockAddress = FALSE;
+	uint8_t lockSize = FALSE;
+	uint8_t lockLength = FALSE;
+	uint8_t realAddress;
+	uint8_t sizeData;
+	uint8_t data[LENGTH_DATA_MEMORY];
+	DataTransfer_Hour_Type *data_queue;
 
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsMenus,
+				(EVENT_HOUR_MENU), pdTRUE,
+				pdTRUE, portMAX_DELAY);
 
+		/**Print in the UART for phases*/
+		menu_SetHour(phase);
+
+		/**Queue is received to get the phase*/
+		do
+		{
+			xQueueReceive(g_Queue_Hour, &data_queue, portMAX_DELAY);
+			if((ADDRESS == data_queue->type) && (FALSE == lockAddress))
+			{
+				phase = data_queue->phase;
+				realAddress = data_queue->address;
+				lockAddress = TRUE;
+			}
+			if((SIZE == data_queue->type) && (FALSE == lockLength))
+			{
+				phase = data_queue->phase;
+				sizeData = data_queue->size;
+				lockLength = TRUE;
+			}
+			if((DATA == data_queue->phase) && (FALSE == lockData))
+			{
+				phase = data_queue->phase;
+				lockData = TRUE;
+			}
+		}
+		while(0 != uxQueueMessagesWaiting(g_Queue_Hourr));
+
+		/**Set the flag event to jump to the next task*/
+		xEventGroupGetBits(g_eventsHour);
+
+		if(0 == phase)
+		{
+			/**Jump to WriteI2C Address*/
+			xEventGroupSetBits(g_eventsHour, EVENT_WI2C_ADDRESS);
+		}
+		if(1 == phase)
+		{
+			/**Jump to WriteI2C Data*/
+			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_DATA);
+		}
+		if(2 == phase)
+		{
+			/**Jump to WriteI2C Final*/
+			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_FINAL);
+
+		}
+		if(3 == phase)
+		{
+			/**Jump to WriteI2C FinalI2C*/
+			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_FINALI2C);
+		}
 	}
 }
 
