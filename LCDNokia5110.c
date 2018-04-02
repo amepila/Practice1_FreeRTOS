@@ -8,12 +8,12 @@
 #include "board.h"
 #include "peripherals.h"
 #include "pin_mux.h"
-#include "fsl_dspi.h"
 #include "fsl_port.h"
 #include "fsl_gpio.h"
+#include "fsl_dspi.h"
 #include "LCDNokia5110.h"
 
-#define TEST	(0)
+#define TEST		(0)
 #define BIT_DATA	(1<<3)
 #define BIT_RESET	(1<<0)
 

@@ -67,7 +67,8 @@ const Button_ConfigType Buttons_Config[4] =
 int main(void)
 {
   	/* Init board hardware. */
-    BOARD_InitBootPins();
+
+	BOARD_InitBootPins();
     BOARD_InitBootClocks();
     BOARD_InitBootPeripherals();
   	/* Init FSL debug console. */
@@ -77,12 +78,12 @@ int main(void)
 	Buttons_init(Buttons_Config);
     init_UART0();
     init_UART1();
-    init_SPI0();
+    //init_SPI0();
 
 	/***Enable IRQ's***/
-	NVIC_EnableIRQ(PORTC_IRQn);
+	//NVIC_EnableIRQ(PORTC_IRQn);
 	/**Set the priority**/
-	NVIC_SetPriority(PORTC_IRQn,5);
+	//NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
 	vTaskStartScheduler();
