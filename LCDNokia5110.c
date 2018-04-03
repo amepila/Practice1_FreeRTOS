@@ -124,7 +124,7 @@ volatile bool masterFinished;
 static void dspi_master_transfer_callback(SPI_Type *base,
 		dspi_master_handle_t *handle, status_t status, void *userData)
 {
-	if (kStatus_DSPI_Idle == status)
+	if (0 == status)
 	{
 		masterFinished = true;
 	}

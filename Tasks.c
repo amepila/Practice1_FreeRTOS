@@ -171,7 +171,7 @@ Time_Type *rtcTime = &g_Time;
 
 typedef enum
 {
-	ASCII_1 = 49,
+	ASCII_1 = '1',
 	ASCII_2 = 50,
 	ASCII_3 = 51,
 	ASCII_4 = 52,
@@ -225,6 +225,10 @@ void PORTC_IRQHandler()
 		xEventGroupSetBitsFromISR(g_button_events,
 				EVENT_BUTTON4, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+	}
+	else
+	{
+		PORT_ClearPinsInterruptFlags(PORTC, (uint32_t)-1);
 	}
 }
 
@@ -293,6 +297,7 @@ status_t init_UART1(void)
 
 void taskINIT(void *arg)
 {
+#if 0
 	g_semaphore_Init = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
 
@@ -411,6 +416,7 @@ void taskINIT(void *arg)
 #endif
 
 	xSemaphoreGive(g_semaphore_Init);
+#endif
 
 	for(;;)
 	{
