@@ -154,7 +154,7 @@ status_t init_SPI0(void)
     dspi_master_config_t masterConfig;
 
     DSPI_MasterGetDefaultConfig(&masterConfig);
-    masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveLow;
+    //masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveLow;
 
     DSPI_MasterInit(SPI0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
     DSPI_MasterTransferCreateHandle(SPI0, &g_dspiHandle,

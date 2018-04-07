@@ -88,9 +88,11 @@
 #define ASCII_NUMBER			(49)
 
 SemaphoreHandle_t g_semaphore_Init;
+SemaphoreHandle_t g_semaphore_UART0;
 QueueHandle_t g_Queue_ReadI2C;
 QueueHandle_t g_Queue_WriteI2C;
 QueueHandle_t g_Queue_SetHour;
+QueueHandle_t g_Queue_UART0_RX;
 
 EventGroupHandle_t g_eventsMenus;
 EventGroupHandle_t g_button_events;
@@ -172,19 +174,35 @@ Time_Type *rtcTime = &g_Time;
 typedef enum
 {
 	ASCII_1 = '1',
-	ASCII_2 = 50,
-	ASCII_3 = 51,
-	ASCII_4 = 52,
-	ASCII_5 = 53,
-	ASCII_6 = 54,
-	ASCII_7 = 55,
-	ASCII_8 = 56,
-	ASCII_9 = 57
+	ASCII_2 = '2',
+	ASCII_3 = '3',
+	ASCII_4 = '4',
+	ASCII_5 = '5',
+	ASCII_6 = '6',
+	ASCII_7 = '7',
+	ASCII_8 = '8',
+	ASCII_9 = '9'
 }g_codeASCII_num;
 
 /**ASCII Code to Esc and CR*/
 const uint8_t ESC = 27;
 const uint8_t CR = 13;
+
+void UART0_RX_TX_IRQHandler()
+{
+	uint8_t data = 0;
+	BaseType_t xHigherPriorityTaskWoken;
+	static uint8_t keyActivate = 0;
+	uint8_t state;
+
+	xHigherPriorityTaskWoken = pdFALSE;
+	state = UART_GetEnabledInterrupts(UART0);
+
+	UART_ReadBlocking(UART0, &data, sizeof(uint8_t));
+	xQueueSendFromISR(g_Queue_UART0_RX, &data, &xHigherPriorityTaskWoken);
+	xSemaphoreGiveFromISR(g_semaphore_UART0, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
 
 void PORTC_IRQHandler()
 {
@@ -193,42 +211,39 @@ void PORTC_IRQHandler()
 
 	buttonPressed = PORT_GetPinsInterruptFlags(PORTC);
 
-	if(BUTTON_1 == buttonPressed)
+	switch(buttonPressed)
 	{
+	case BUTTON_1:
 		PORT_ClearPinsInterruptFlags(PORTC, BUTTON_1);
 		xHigherPriorityTaskWoken = pdFALSE;
 		xEventGroupSetBitsFromISR(g_button_events,
 				EVENT_BUTTON1, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	}
-
-	if(BUTTON_2 == buttonPressed)
-	{
+		break;
+	case BUTTON_2:
 		PORT_ClearPinsInterruptFlags(PORTC, BUTTON_2);
 		xHigherPriorityTaskWoken = pdFALSE;
 		xEventGroupSetBitsFromISR(g_button_events,
 				EVENT_BUTTON2, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	}
-	if(BUTTON_3 == buttonPressed)
-	{
+		break;
+	case BUTTON_3:
 		PORT_ClearPinsInterruptFlags(PORTC, BUTTON_3);
 		xHigherPriorityTaskWoken = pdFALSE;
 		xEventGroupSetBitsFromISR(g_button_events,
 				EVENT_BUTTON3, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	}
-	if(BUTTON_4 == buttonPressed)
-	{
+		break;
+	case BUTTON_4:
 		PORT_ClearPinsInterruptFlags(PORTC, BUTTON_4);
 		xHigherPriorityTaskWoken = pdFALSE;
 		xEventGroupSetBitsFromISR(g_button_events,
 				EVENT_BUTTON4, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	}
-	else
-	{
+		break;
+	default:
 		PORT_ClearPinsInterruptFlags(PORTC, (uint32_t)-1);
+		break;
 	}
 }
 
@@ -297,9 +312,13 @@ status_t init_UART1(void)
 
 void taskINIT(void *arg)
 {
-#if 0
+
 	g_semaphore_Init = xSemaphoreCreateBinary();
+	g_semaphore_UART0 = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
+
+	g_Queue_UART0_RX = xQueueCreate(1,
+			sizeof(uint8_t));
 
 	g_Queue_ReadI2C = xQueueCreate(3,
 			sizeof(DataTransfer_ReadI2C_Type));
@@ -336,7 +355,7 @@ void taskINIT(void *arg)
 	g_eventsEco = xEventGroupCreate();
 
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Read, "Read_Menu",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Write, "Write_Menu",
@@ -416,8 +435,6 @@ void taskINIT(void *arg)
 #endif
 
 	xSemaphoreGive(g_semaphore_Init);
-#endif
-
 	for(;;)
 	{
 	}
@@ -438,7 +455,7 @@ void taskREADI2C_Address(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_RI2C_ADDRESS), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -455,6 +472,7 @@ void taskREADI2C_Address(void *arg)
 				}
 			}
 		}
+
 		realAddress = Convert_numberASCIItoDATA(data);
 		phase = 1;
 
@@ -484,7 +502,7 @@ void taskREADI2C_Lenght(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_RI2C_LENGTH), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -529,7 +547,7 @@ void taskREADI2C_Data(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_RI2C_DATA), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -561,6 +579,7 @@ void taskREADI2C_Data(void *arg)
 			sizeof(uint8_t));
 			E2PROM(6500);
 #endif
+
 		}
 		/**Testing*/
 		UART_WriteBlocking(UART0, test, sizeof(test));
@@ -581,7 +600,7 @@ void taskREADI2C_FinalRead(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_RI2C_FINAL), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 		vPortFree(g_Queue_ReadI2C);
@@ -604,7 +623,7 @@ void taskWRITEI2C_AddressWrite(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_WI2C_ADDRESS), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -651,7 +670,7 @@ void taskWRITEI2C_DataWrite(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_WI2C_DATA), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -712,7 +731,7 @@ void taskWRITEI2C_FinalWrite(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_WI2C_FINAL), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -754,7 +773,7 @@ void taskWRITEI2C_FinalWriteI2C(void *arg)
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
+		xEventGroupWaitBits(g_eventsMenus,
 				(EVENT_WI2C_FINALI2C), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
@@ -911,6 +930,7 @@ void taskMENU_Menu(void *arg)
 	uint8_t lock = FALSE;
 	uint8_t bitSet;
 	uint8_t counter;
+	uint8_t input;
 	uint8_t lockWrite = FALSE;
 
 	g_receiveXUart0.data = data;
@@ -923,14 +943,14 @@ void taskMENU_Menu(void *arg)
 	for(;;)
 	{
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
-		vTaskSuspend(taskINIT);
-
 		menu_Main0();
+
 #if 0
 		/**Print the time in LCD*/
 		printTimeLCD(*rtcTime);
 #endif
 
+#if 0
 		UART_TransferReceiveNonBlocking(UART0,
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)
@@ -942,20 +962,28 @@ void taskMENU_Menu(void *arg)
 			    lockWrite = TRUE;
 			}
 		}
-#if 0
-		if(CR == data[1])
-		{
-			for(counter = 0; counter < 9; counter++)
-			{
-				if((ASCII_NUMBER + counter) == data[0])
-				{
-					bitSet = 1<<counter;
-				}
-			}
-			xEventGroupSetBits(g_eventsMenus, bitSet);
-		}
 #endif
+
+		xSemaphoreTake(g_semaphore_UART0,portMAX_DELAY);
+
+		if(xQueueReceive(g_Queue_UART0_RX, &input, portMAX_DELAY) != pdPASS)
+		{
+			PRINTF("ERROR\n");
+		}
+		else
+		{
+			PRINTF("SUCCES");
+		}
+
 		xEventGroupGetBits(g_eventsMenus);
+		for(counter = 0; counter < 9; counter++)
+		{
+			if((ASCII_NUMBER + counter) == g_receiveXUart0.data[0])
+			{
+				bitSet = 1<<counter;
+			}
+		}
+		xEventGroupSetBits(g_eventsMenus, bitSet);
 	}
 }
 
