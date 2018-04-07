@@ -188,22 +188,6 @@ typedef enum
 const uint8_t ESC = 27;
 const uint8_t CR = 13;
 
-void UART0_RX_TX_IRQHandler()
-{
-	uint8_t data = 0;
-	BaseType_t xHigherPriorityTaskWoken;
-	static uint8_t keyActivate = 0;
-	uint8_t state;
-
-	xHigherPriorityTaskWoken = pdFALSE;
-	state = UART_GetEnabledInterrupts(UART0);
-
-	UART_ReadBlocking(UART0, &data, sizeof(uint8_t));
-	xQueueSendFromISR(g_Queue_UART0_RX, &data, &xHigherPriorityTaskWoken);
-	xSemaphoreGiveFromISR(g_semaphore_UART0, &xHigherPriorityTaskWoken);
-	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
-
 void PORTC_IRQHandler()
 {
 	uint32_t buttonPressed;
@@ -310,11 +294,22 @@ status_t init_UART1(void)
 	return (kStatus_Success);
 }
 
+void fifoByte_UART0(uint8_t *byte)
+{
+	g_receiveXUart0.data = byte;
+	g_receiveXUart0.dataSize = sizeof(uint8_t);
+	rx0Finished = false;
+
+	UART_TransferReceiveNonBlocking(UART0,
+			&g_uart0Handle, &g_receiveXUart0, NULL);
+	while (!rx0Finished)
+	{
+	}
+}
+
 void taskINIT(void *arg)
 {
-
 	g_semaphore_Init = xSemaphoreCreateBinary();
-	g_semaphore_UART0 = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
 
 	g_Queue_UART0_RX = xQueueCreate(1,
@@ -619,6 +614,7 @@ void taskWRITEI2C_AddressWrite(void *arg)
 	g_receiveXUart0.data = data;
 	g_receiveXUart0.dataSize = sizeof(data);
 	rx0Finished = false;
+
 
 	for(;;)
 	{
@@ -926,25 +922,29 @@ void taskECO_FinalEco(void *arg)
 /**********************************************************/
 void taskMENU_Menu(void *arg)
 {
-	uint8_t data[2] = {0};
-	uint8_t lock = FALSE;
+	uint8_t data;
+	uint8_t string[2] = {0};
 	uint8_t bitSet;
 	uint8_t counter;
-	uint8_t input;
-	uint8_t lockWrite = FALSE;
+	const uint8_t numberMAX_MENUS = 9;
+	const uint8_t numberMAX_STRING = 2;
 
-	g_receiveXUart0.data = data;
-	g_receiveXUart0.dataSize = sizeof(data);
+#if 0
+	g_receiveXUart0.data = &data;
+	g_receiveXUart0.dataSize = sizeof(uint8_t);
 	rx0Finished = false;
+#endif
+
 #if 0
 	/**Send the struct to RTC**/
 	setTimeLCD(*rtcTime);
 #endif
+
+	xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
+	menu_Main0();
+
 	for(;;)
 	{
-		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
-		menu_Main0();
-
 #if 0
 		/**Print the time in LCD*/
 		printTimeLCD(*rtcTime);
@@ -955,30 +955,48 @@ void taskMENU_Menu(void *arg)
 				&g_uart0Handle, &g_receiveXUart0, NULL);
 		while (!rx0Finished)
 		{
-			if((g_receiveXUart0.data[0] != 0) && (FALSE == lockWrite))
+			if((*g_receiveXUart0.data != CR) && (*g_receiveXUart0.data != 0)
+					&&(pdFALSE ==keyUART0))
 			{
-			    UART_WriteBlocking(UART0, &g_receiveXUart0.data[0],
+				string[0] = *g_receiveXUart0.data;
+			    UART_WriteBlocking(UART0, g_receiveXUart0.data,
 			    		sizeof(uint8_t));
-			    lockWrite = TRUE;
+			    data = 0;
+			    keyUART0 = pdTRUE;
+
 			}
+			if(*g_receiveXUart0.data == CR)
+			{
+				string[1] = *g_receiveXUart0.data;
+				flagWrite = pdTRUE;
+			}
+		}
+
+		if(pdTRUE == keyUART0)
+		{
+			g_receiveXUart0.data = &data;
+			g_receiveXUart0.dataSize = sizeof(uint8_t);
+			rx0Finished = false;
+			keyUART0 = pdFALSE;
 		}
 #endif
 
-		xSemaphoreTake(g_semaphore_UART0,portMAX_DELAY);
+		for(counter = 0; counter < numberMAX_STRING; counter++)
+		{
+			fifoByte_UART0(&data);
+			string[counter] = data;
 
-		if(xQueueReceive(g_Queue_UART0_RX, &input, portMAX_DELAY) != pdPASS)
-		{
-			PRINTF("ERROR\n");
-		}
-		else
-		{
-			PRINTF("SUCCES");
+			if(counter == 0)
+			{
+			    UART_WriteBlocking(UART0, &string[counter],
+			    		sizeof(uint8_t));
+			}
 		}
 
 		xEventGroupGetBits(g_eventsMenus);
-		for(counter = 0; counter < 9; counter++)
+		for(counter = 0; counter < numberMAX_MENUS; counter++)
 		{
-			if((ASCII_NUMBER + counter) == g_receiveXUart0.data[0])
+			if((ASCII_NUMBER + counter) == string[0])
 			{
 				bitSet = 1<<counter;
 			}

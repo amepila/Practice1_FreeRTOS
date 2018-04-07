@@ -69,6 +69,8 @@ status_t init_UART0(void);
 
 status_t init_UART1(void);
 
+void fifoByte_UART0(uint8_t *byte);
+
 void taskINIT(void *arg);
 
 

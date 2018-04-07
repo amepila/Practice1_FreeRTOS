@@ -76,15 +76,13 @@ int main(void)
 	/**Configurations of devices**/
 	Buttons_init(Buttons_Config);
     init_UART0();
-    //init_UART1();
+    init_UART1();
     init_SPI0();
 
 	/***Enable IRQ's***/
 	NVIC_EnableIRQ(PORTC_IRQn);
-	NVIC_EnableIRQ(UART0_RX_TX_IRQn);
 	/**Set the priority**/
 	NVIC_SetPriority(PORTC_IRQn,5);
-	NVIC_SetPriority(UART0_RX_TX_IRQn,7);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
 	vTaskStartScheduler();
