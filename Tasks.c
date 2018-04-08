@@ -59,15 +59,10 @@
 #define EVENT_WI2C_FINALI2C		(1<<3)
 
 #define EVENT_HOUR_SET			(1<<0)
-
 #define EVENT_DATE_SET			(1<<0)
-
 #define EVENT_FORMAT_SET		(1<<0)
-
 #define EVENT_HOUR_READ			(1<<0)
-
 #define EVENT_DATE_READ			(1<<0)
-
 #define EVENT_ECO_TRANS			(1<<0)
 
 #define LENGHT_UART				(2)
@@ -83,6 +78,8 @@ SemaphoreHandle_t g_semaphore_SetDate;
 SemaphoreHandle_t g_semaphore_Format;
 SemaphoreHandle_t g_semaphore_ReadHour;
 SemaphoreHandle_t g_semaphore_ReadDate;
+SemaphoreHandle_t g_semaphore_ReadDate;
+SemaphoreHandle_t g_semaphore_Eco;
 
 QueueHandle_t g_Queue_ReadI2C;
 QueueHandle_t g_Queue_WriteI2C;
@@ -300,6 +297,7 @@ void taskINIT(void *arg)
 	g_semaphore_Format = xSemaphoreCreateBinary();
 	g_semaphore_ReadHour = xSemaphoreCreateBinary();
 	g_semaphore_ReadDate = xSemaphoreCreateBinary();
+	g_semaphore_Eco = xSemaphoreCreateBinary();
 
 /**********************************QUEUES*****************************************/
 	g_Queue_ReadI2C = xQueueCreate(3,
@@ -1024,10 +1022,27 @@ void taskREADDATE_ReadCalendar(void *arg)
 
 void taskECO_TransmitECO(void *arg)
 {
+	const uint8_t numberPHASE = 1;
 
+	uint8_t data;
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsEco,
+				(EVENT_ECO_TRANS), pdTRUE,
+				pdTRUE, portMAX_DELAY);
 
+		while(ASCII_CR != data)
+		{
+			fifoByte_UART0(&data);
+		    UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
+			LCDNokia_sendChar(data);
+		}
+
+		/**Print in the UART for phases*/
+		menu_EcoLCD(numberPHASE);
+		menu_EcoLCD(numberPHASE + 1);
+		xSemaphoreGive(g_semaphore_Eco);
 	}
 }
 
@@ -1353,9 +1368,26 @@ void taskMENU_Terminal2(void *arg)
 
 void taskMENU_Eco(void *arg)
 {
-
+	uint8_t phase = 0;
+	Time_Type time;
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsMenus,
+				(EVENT_ECO_MENU), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+#if 0
+		/**Print the time in LCD*/
+		time = getTime();
+		printTimeLCD(time);
+#endif
+		/**Print in the UART for phases*/
+		menu_EcoLCD(phase);
 
+		/**Set the flag event to jump to the next task*/
+		xEventGroupSetBits(g_eventsEco, EVENT_ECO_TRANS);
+
+		xSemaphoreTake(g_semaphore_Eco, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
