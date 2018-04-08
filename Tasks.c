@@ -88,11 +88,11 @@
 #define ASCII_NUMBER			(49)
 
 SemaphoreHandle_t g_semaphore_Init;
-SemaphoreHandle_t g_Semaphore_SetHour;
+SemaphoreHandle_t g_semaphore_SetHour;
+SemaphoreHandle_t g_semaphore_SetDate;
 SemaphoreHandle_t mutexTEST;
 QueueHandle_t g_Queue_ReadI2C;
 QueueHandle_t g_Queue_WriteI2C;
-QueueHandle_t g_Queue_SetHour;
 
 EventGroupHandle_t g_eventsMenus;
 EventGroupHandle_t g_button_events;
@@ -368,8 +368,8 @@ void fifoByte_UART0(uint8_t *byte)
 void taskINIT(void *arg)
 {
 	g_semaphore_Init = xSemaphoreCreateBinary();
-	g_Semaphore_SetHour = xSemaphoreCreateBinary();
-	mutexTEST = xSemaphoreCreateMutex();
+	g_semaphore_SetHour = xSemaphoreCreateBinary();
+	g_semaphore_SetDate = xSemaphoreCreateBinary();
 	g_button_events = xEventGroupCreate();
 
 	g_Queue_ReadI2C = xQueueCreate(3,
@@ -377,13 +377,7 @@ void taskINIT(void *arg)
 
 	g_Queue_WriteI2C = xQueueCreate(2,
 			sizeof(DataTransfer_WriteI2C_Type));
-
-	g_Queue_SetHour = xQueueCreate(1,
-			sizeof(DataTransfer_Hour_Type));
-
 #if 0
-	g_Queue_SetDate = xQueueCreate(QUEUE_ELEMENTS,
-			sizeof(DataTransfer_Type));
 	g_Queue_Format = xQueueCreate(QUEUE_ELEMENTS,
 			sizeof(DataTransfer_Type));
 	g_Queue_ReadHour = xQueueCreate(QUEUE_ELEMENTS,
@@ -410,22 +404,20 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Read, "Read_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
 	xTaskCreate(taskMENU_Write, "Write_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
-	xTaskCreate(taskREADI2C_Address, "ReadI2C_Address",
+	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 #if 0
+	xTaskCreate(taskREADI2C_Address, "ReadI2C_Address",
+			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskREADI2C_Lenght, "ReadI2C_Lenght",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskREADI2C_Data, "ReadI2C_Data",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskREADI2C_FinalRead, "ReadI2C_Final",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 
-#if 0
 	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Address",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskWRITEI2C_DataWrite, "WriteI2C_Write",
@@ -434,14 +426,11 @@ void taskINIT(void *arg)
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskWRITEI2C_FinalWriteI2C, "WriteI2C_FinalI2C",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-
+#endif
 	xTaskCreate(taskSETHOUR_SetTime, "SetHour_Set",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskSETHOUR_SaveTime, "SetHour_Save",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskSETHOUR_FinalSetHour, "SetHour_Final",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
+#if 0
 	xTaskCreate(taskSETDATE_SetCalendar, "SetDate_Set",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskSETDATE_SaveDate, "SetDate_Save",
@@ -473,8 +462,6 @@ void taskINIT(void *arg)
 	xTaskCreate(taskECO_FinalEco, "Eco_Final",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 
-	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetDate, "SetDate_Menu",
 			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Format, "Format_Menu",
@@ -784,7 +771,7 @@ void taskWRITEI2C_FinalWrite(void *arg)
 #if 0
 		for(counter = size; counter != 0; counter--)
 		{
-			writeMemory((address + counterAddress), data[counterAddress]);
+			writeMemory((address + counterAddress), string[counterAddress]);
 			counterAddress++;
 			E2PROMdelay(65000);
 		}
@@ -819,13 +806,14 @@ void taskSETHOUR_SetTime(void *arg)
 	const uint8_t stringFormat12[25] = "Formato en 12 horas\t";
 	const uint8_t numberMAX_STRING = 3;
 	const uint8_t numberPHASE = 1;
+	const uint8_t char_doublepoint = ':';
 
 	uint8_t data;
 	uint8_t counter;
 	Time_Type time;
-	uint8_t hours[numberMAX_STRING - 1];
-	uint8_t minutes[numberMAX_STRING - 1];
-	uint8_t seconds[numberMAX_STRING - 1];
+	uint8_t hours[numberMAX_STRING];
+	uint8_t minutes[numberMAX_STRING];
+	uint8_t seconds[numberMAX_STRING];
 	Time_Type realTime;
 
 	for(;;)
@@ -847,25 +835,25 @@ void taskSETHOUR_SetTime(void *arg)
 		{
 			UART_WriteBlocking(UART0, stringFormat12, sizeof(stringFormat12));
 		}
-
+#if 0
 		/**Wait the event button to continue the task*/
 		xEventGroupWaitBits(g_button_events,
 				(EVENT_BUTTON4), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-
+#endif
 		/**Capturing the hour*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
 			fifoByte_UART0(&data);
+			hours[counter] = data;
 			if(ASCII_CR != data)
 			{
-				hours[counter] = data;
 			    UART_WriteBlocking(UART0, &hours[counter],
 			    		sizeof(uint8_t));
 			}
 			else
 			{
-				UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT,
+				UART_WriteBlocking(UART0, &char_doublepoint,
 						sizeof(uint8_t));
 			}
 		}
@@ -874,15 +862,15 @@ void taskSETHOUR_SetTime(void *arg)
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
 			fifoByte_UART0(&data);
+			minutes[counter] = data;
 			if(ASCII_CR != data)
 			{
-				minutes[counter] = data;
 			    UART_WriteBlocking(UART0, &minutes[counter],
 			    		sizeof(uint8_t));
 			}
 			else
 			{
-				UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT,
+				UART_WriteBlocking(UART0, &char_doublepoint,
 						sizeof(uint8_t));
 			}
 		}
@@ -891,9 +879,9 @@ void taskSETHOUR_SetTime(void *arg)
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
 			fifoByte_UART0(&data);
+			seconds[counter] = data;
 			if(ASCII_CR != data)
 			{
-				seconds[counter] = data;
 			    UART_WriteBlocking(UART0, &seconds[counter],
 			    		sizeof(uint8_t));
 			}
@@ -905,14 +893,14 @@ void taskSETHOUR_SetTime(void *arg)
 		realTime.hour.period = time.hour.period;
 		realTime.modifyDate = pdFALSE;
 		realTime.modifyTime = pdTRUE;
-
+#if 0
 		setTimeLCD(realTime);
-
+#endif
 		/**Print in the UART for phases*/
 		menu_SetHour(numberPHASE);
 		menu_SetHour(numberPHASE + 1);
 
-		xSemaphoreGive(g_Semaphore_SetHour);
+		xSemaphoreGive(g_semaphore_SetHour);
 	}
 }
 
@@ -1099,7 +1087,6 @@ void taskMENU_Menu(void *arg)
 void taskMENU_Read(void *arg)
 {
 	uint32_t phase = 0;
-	uint8_t counter;
 	uint8_t lockQueue = pdTRUE;
 	DataTransfer_ReadI2C_Type *data_queue;
 
@@ -1245,8 +1232,6 @@ void taskMENU_SetHour(void *arg)
 void taskMENU_SetDate(void *arg)
 {
 	uint8_t phase = 0;
-	uint8_t lockQueue = pdTRUE;
-
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
@@ -1257,46 +1242,11 @@ void taskMENU_SetDate(void *arg)
 		/**Print in the UART for phases*/
 		menu_SetDate(phase);
 
-		if(pdFALSE == lockQueue)
-		{
-			/**Queue is peeked to get the phase*/
-			xQueuePeek(g_Queue_SetDate, &data_queue, portMAX_DELAY);
-			switch(data_queue->type)
-			{
-			case SET_HOUR:
-				phase = data_queue->phase;
-				break;
-			case FORMAT_H:
-				phase = data_queue->phase;
-				break;
-			case SAVE_HOUR:
-				phase = data_queue->phase;
-				break;
-			default:
-				break;
-			}
-		}
-
 		/**Set the flag event to jump to the next task*/
-		switch(phase)
-		{
-		case 0:
-			/**Jump to WriteI2C Address*/
-			xEventGroupSetBits(g_eventsSetDate, EVENT_DATE_SET);
-			lockQueue = pdFALSE;
-			break;
-		case 1:
-			/**Jump to WriteI2C Data*/
-			xEventGroupSetBits(g_eventsSetDate, EVENT_DATE_SAVE);
-			break;
-		case 2:
-			/**Jump to WriteI2C Final*/
-			xEventGroupSetBits(g_eventsSetDate, EVENT_DATE_FINAL);
-			lockQueue = pdTRUE;
-			break;
-		default:
-			break;
-		}
+		xEventGroupSetBits(g_eventsSetDate, EVENT_DATE_SET);
+
+		xSemaphoreTake(g_semaphore_SetDate, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 
 	}
 }
