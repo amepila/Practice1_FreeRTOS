@@ -88,6 +88,7 @@
 #define ASCII_NUMBER			(49)
 
 SemaphoreHandle_t g_semaphore_Init;
+SemaphoreHandle_t g_Semaphore_SetHour;
 SemaphoreHandle_t mutexTEST;
 QueueHandle_t g_Queue_ReadI2C;
 QueueHandle_t g_Queue_WriteI2C;
@@ -151,15 +152,13 @@ typedef struct
 typedef enum
 {
 	SET_HOUR,
-	FORMAT_H,
 	SAVE_HOUR
 }DataType_Hour;
 
 typedef struct
 {
-	Hour_Type time;
+	Time_Type time;
 	uint32_t phase;
-	FORMAT_HOUR format;
 	DataType_Hour type;
 }DataTransfer_Hour_Type;
 
@@ -172,10 +171,10 @@ typedef enum
 
 typedef struct
 {
-	Date_Type date;
+	Time_Type date;
 	uint32_t phase;
 	DataType_Date type;
-}DataTransfer_Hour_Type;
+}DataTransfer_Date_Type;
 
 /**************Data Type Format************/
 typedef enum
@@ -190,34 +189,32 @@ typedef struct
 	FORMAT_HOUR format;
 	uint32_t phase;
 	DataType_Format type;
-}DataTransfer_Hour_Type;
+}DataTransfer_Format_Type;
 
 /**************Data Type Read Time************/
 typedef enum
 {
-	SHOW_FORMAT,
-	CHANGE,
-	SAVE_FORMAT
-}DataType_Format;
+	READ_TIME
+}DataType_RTime;
 
 typedef struct
 {
 	FORMAT_HOUR format;
 	uint32_t phase;
 	DataType_Format type;
-}DataTransfer_Hour_Type;
+}DataTransfer_RTime_Type;
 
 /**************Data Type Read Calendar************/
 typedef enum
 {
-	REA_CALENDAR
-}DataType_Format;
+	READ_CALENDAR
+}DataType_Calendar;
 
 typedef struct
 {
 	FORMAT_HOUR format;
 	DataType_Format type;
-}DataTransfer_Hour_Type;
+}DataTransfer_Calendar_Type;
 
 /**Structure with the time*/
 Time_Type g_Time =
@@ -241,12 +238,13 @@ typedef enum
 	ASCII_7 = '7',
 	ASCII_8 = '8',
 	ASCII_9 = '9',
-	ASCII_CR = '\r'
+	ASCII_CR = '\r',
+	ASCII_DIAG = '/',
+	ASCII_DOUBLEPOINT = ':'
 }g_codeASCII_num;
 
 /**ASCII Code to Esc and CR*/
 const uint8_t ESC = 27;
-const uint8_t CR = 13;
 
 void PORTC_IRQHandler()
 {
@@ -370,6 +368,7 @@ void fifoByte_UART0(uint8_t *byte)
 void taskINIT(void *arg)
 {
 	g_semaphore_Init = xSemaphoreCreateBinary();
+	g_Semaphore_SetHour = xSemaphoreCreateBinary();
 	mutexTEST = xSemaphoreCreateMutex();
 	g_button_events = xEventGroupCreate();
 
@@ -379,7 +378,7 @@ void taskINIT(void *arg)
 	g_Queue_WriteI2C = xQueueCreate(2,
 			sizeof(DataTransfer_WriteI2C_Type));
 
-	g_Queue_SetHour = xQueueCreate(3,
+	g_Queue_SetHour = xQueueCreate(1,
 			sizeof(DataTransfer_Hour_Type));
 
 #if 0
@@ -678,7 +677,7 @@ void taskWRITEI2C_AddressWrite(void *arg)
 			    		sizeof(uint8_t));
 			}
 		}
-		realAddress = Convert_numberASCIItoDATA(data);
+		realAddress = Convert_numberASCIItoDATA(string);
 
 		data_queue = pvPortMalloc(sizeof(DataTransfer_WriteI2C_Type));
 		data_queue->address = realAddress;
@@ -709,11 +708,10 @@ void taskWRITEI2C_DataWrite(void *arg)
 
 		for(counter = 0; counter < LENGTH_DATA_MEMORY; counter++)
 		{
+			fifoByte_UART0(&data);
 			if(ASCII_CR != data)
 			{
-				fifoByte_UART0(&data);
 				string[counter] = data;
-
 			    UART_WriteBlocking(UART0, &string[counter],
 			    		sizeof(uint8_t));
 			}
@@ -774,7 +772,7 @@ void taskWRITEI2C_FinalWrite(void *arg)
 				for(counter = 0; counter < LENGTH_DATA_MEMORY;
 						counter++)
 				{
-					data[counter] = data_queueReceived->data[counter];
+					string[counter] = data_queueReceived->data[counter];
 				}
 				break;
 			default:
@@ -817,13 +815,18 @@ void taskWRITEI2C_FinalWriteI2C(void *arg)
 
 void taskSETHOUR_SetTime(void *arg)
 {
-	const uint8_t numberMAX_STRING = 5;
+	const uint8_t stringFormat24[25] = "Formato en 24 horas\t";
+	const uint8_t stringFormat12[25] = "Formato en 12 horas\t";
+	const uint8_t numberMAX_STRING = 3;
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
 	uint8_t counter;
-	uint8_t string[numberMAX_STRING];
-	DataTransfer_Hour_Type *data_queue;
+	Time_Type time;
+	uint8_t hours[numberMAX_STRING - 1];
+	uint8_t minutes[numberMAX_STRING - 1];
+	uint8_t seconds[numberMAX_STRING - 1];
+	Time_Type realTime;
 
 	for(;;)
 	{
@@ -831,37 +834,85 @@ void taskSETHOUR_SetTime(void *arg)
 		xEventGroupWaitBits(g_eventsSetHour,
 				(EVENT_HOUR_SET), pdTRUE,
 				pdTRUE, portMAX_DELAY);
+#if 0
+		/**Get the time into variable only once*/
+		time = getTime();
+#endif
 
+		if(FORMAT_24H == time.hour.format)
+		{
+			UART_WriteBlocking(UART0, stringFormat24, sizeof(stringFormat24));
+		}
+		else
+		{
+			UART_WriteBlocking(UART0, stringFormat12, sizeof(stringFormat12));
+		}
+
+		/**Wait the event button to continue the task*/
+		xEventGroupWaitBits(g_button_events,
+				(EVENT_BUTTON4), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+
+		/**Capturing the hour*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
 			fifoByte_UART0(&data);
-			string[counter] = data;
-
-			if(ASCII_CR != string[counter])
+			if(ASCII_CR != data)
 			{
-			    UART_WriteBlocking(UART0, &string[counter],
+				hours[counter] = data;
+			    UART_WriteBlocking(UART0, &hours[counter],
 			    		sizeof(uint8_t));
+			}
+			else
+			{
+				UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT,
+						sizeof(uint8_t));
 			}
 		}
 
+		/**Capturing the minutes*/
+		for(counter = 0; counter < numberMAX_STRING; counter++)
+		{
+			fifoByte_UART0(&data);
+			if(ASCII_CR != data)
+			{
+				minutes[counter] = data;
+			    UART_WriteBlocking(UART0, &minutes[counter],
+			    		sizeof(uint8_t));
+			}
+			else
+			{
+				UART_WriteBlocking(UART0, ASCII_DOUBLEPOINT,
+						sizeof(uint8_t));
+			}
+		}
 
-	}
-}
+		/**Capturing the seconds*/
+		for(counter = 0; counter < numberMAX_STRING; counter++)
+		{
+			fifoByte_UART0(&data);
+			if(ASCII_CR != data)
+			{
+				seconds[counter] = data;
+			    UART_WriteBlocking(UART0, &seconds[counter],
+			    		sizeof(uint8_t));
+			}
+		}
+		realTime.hour.hour = Convert_numberASCIItoDATA(hours);
+		realTime.hour.minutes = Convert_numberASCIItoDATA(minutes);
+		realTime.hour.seconds = Convert_numberASCIItoDATA(seconds);
+		realTime.hour.format = time.hour.format;
+		realTime.hour.period = time.hour.period;
+		realTime.modifyDate = pdFALSE;
+		realTime.modifyTime = pdTRUE;
 
-void taskSETHOUR_SaveTime(void *arg)
-{
+		setTimeLCD(realTime);
 
-	for(;;)
-	{
+		/**Print in the UART for phases*/
+		menu_SetHour(numberPHASE);
+		menu_SetHour(numberPHASE + 1);
 
-	}
-}
-
-void taskSETHOUR_FinalSetHour(void *arg)
-{
-	for(;;)
-	{
-
+		xSemaphoreGive(g_Semaphore_SetHour);
 	}
 }
 
@@ -983,15 +1034,34 @@ void taskECO_FinalEco(void *arg)
 /**********************************************************/
 void taskMENU_Menu(void *arg)
 {
-	uint8_t data;
-	uint8_t string[2] = {0};
-	uint8_t bitSet;
-	uint8_t counter;
 	const uint8_t numberMAX_MENUS = 9;
 	const uint8_t numberMAX_STRING = 2;
+
+	uint8_t data;
+	uint8_t string[numberMAX_STRING];
+	uint8_t bitSet;
+	uint8_t counter;
+
+	/**Set of initial Clock**/
+	Time_Type realTimeClock;
+	realTimeClock.hour.format = FORMAT_24H;
+	realTimeClock.hour.period = NON_PERIOD;
+	realTimeClock.modifyDate = TRUE;
+	realTimeClock.modifyTime = TRUE;
+
+	/**Set the initial hour**/
+	realTimeClock.hour.hour = 6;
+	realTimeClock.hour.minutes = 0;
+	realTimeClock.hour.seconds = 0;
+
+	/**Set the initial date**/
+	realTimeClock.date.day = 16;
+	realTimeClock.date.month = 11;
+	realTimeClock.date.year = 2017;
+
 #if 0
 	/**Send the struct to RTC**/
-	setTimeLCD(*rtcTime);
+	setTimeLCD(realTimeClock);
 #endif
 
 	for(;;)
@@ -1154,9 +1224,6 @@ void taskMENU_Write(void *arg)
 void taskMENU_SetHour(void *arg)
 {
 	uint8_t phase = 0;
-	uint8_t lockQueue = pdTRUE;
-	DataTransfer_Hour_Type *data_queue;
-
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
@@ -1167,46 +1234,11 @@ void taskMENU_SetHour(void *arg)
 		/**Print in the UART for phases*/
 		menu_SetHour(phase);
 
-		if(pdFALSE == lockQueue)
-		{
-			/**Queue is peeked to get the phase*/
-			xQueuePeek(g_Queue_SetHour, &data_queue, portMAX_DELAY);
-			switch(data_queue->type)
-			{
-			case SET_HOUR:
-				phase = data_queue->phase;
-				break;
-			case FORMAT_H:
-				phase = data_queue->phase;
-				break;
-			case SAVE_HOUR:
-				phase = data_queue->phase;
-				break;
-			default:
-				break;
-			}
-		}
-
 		/**Set the flag event to jump to the next task*/
-		switch(phase)
-		{
-		case 0:
-			/**Jump to WriteI2C Address*/
-			xEventGroupSetBits(g_eventsSetHour, EVENT_HOUR_SET);
-			lockQueue = pdFALSE;
-			break;
-		case 1:
-			/**Jump to WriteI2C Data*/
-			xEventGroupSetBits(g_eventsSetHour, EVENT_HOUR_SAVE);
-			break;
-		case 2:
-			/**Jump to WriteI2C Final*/
-			xEventGroupSetBits(g_eventsSetHour, EVENT_HOUR_FINAL);
-			lockQueue = pdTRUE;
-			break;
-		default:
-			break;
-		}
+		xEventGroupSetBits(g_eventsSetHour, EVENT_HOUR_SET);
+
+		xSemaphoreTake(g_semaphore_SetHour, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
 

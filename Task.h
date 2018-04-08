@@ -94,10 +94,6 @@ void taskWRITEI2C_FinalWriteI2C(void *arg);
 
 void taskSETHOUR_SetTime(void *arg);
 
-void taskSETHOUR_SaveTime(void *arg);
-
-void taskSETHOUR_FinalSetHour(void *arg);
-
 
 void taskSETDATE_SetCalendar(void *arg);
 

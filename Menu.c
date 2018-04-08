@@ -288,6 +288,7 @@ uint8_t menu_SetHour(uint8_t phase)
 			/** VT100 command for positioning the cursor in x and y position*/
 		    UART_WriteBlocking(UART0, line10, sizeof(line10));
 		    UART_WriteBlocking(UART0, string1, sizeof(string1));
+		    UART_WriteBlocking(UART0, line11, sizeof(line11));
 
 			flagContinue.flag1 = 1;
 		}
@@ -298,7 +299,7 @@ uint8_t menu_SetHour(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART0, line11, sizeof(line11));
+		    UART_WriteBlocking(UART0, line12, sizeof(line12));
 		    UART_WriteBlocking(UART0, string2, sizeof(string2));
 
 			/** VT100 command for positioning the cursor in x and y position*/
