@@ -97,33 +97,17 @@ void taskSETHOUR_SetTime(void *arg);
 
 void taskSETDATE_SetCalendar(void *arg);
 
-void taskSETDATE_SaveDate(void *arg);
-
-void taskSETDATE_FinalSetDate(void *arg);
-
 
 void taskFORMAT_ShowFormat(void *arg);
-
-void taskFORMAT_Change(void *arg);
-
-void taskFORMAT_SaveFormat(void *arg);
-
-void taskFORMAT_FinalFormat(void *arg);
 
 
 void taskREADHOUR_ReadTime(void *arg);
 
-void taskREADHOUR_FinalRH(void *arg);
-
 
 void taskREADDATE_ReadCalendar(void *arg);
 
-void taskREADDATE_FinalRD(void *arg);
-
 
 void taskECO_TransmitECO(void *arg);
-
-void taskECO_FinalEco(void *arg);
 
 
 void taskMENU_Menu(void *arg);
