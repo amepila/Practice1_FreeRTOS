@@ -78,6 +78,7 @@ int main(void)
     init_UART0();
     init_UART1();
     init_SPI0();
+	LCDNokia_clear();
 
 	/***Enable IRQ's***/
 	NVIC_EnableIRQ(PORTC_IRQn);

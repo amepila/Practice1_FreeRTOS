@@ -331,10 +331,8 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 	xTaskCreate(taskMENU_SetDate, "SetDate_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
 	xTaskCreate(taskMENU_Format, "Format_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadHour, "ReadHour_Menu",
@@ -343,9 +341,9 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#endif
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 
 	/******************************READ I2C TASKS****************************/
 #if 0
@@ -373,32 +371,33 @@ void taskINIT(void *arg)
 
 	xTaskCreate(taskSETHOUR_SetTime, "SetHour_Set",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+
 	/******************************SET DATE TASKS****************************/
 
 	xTaskCreate(taskSETDATE_SetCalendar, "SetDate_Set",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
-#if 0
 	/******************************FORMAT TASK****************************/
 
 	xTaskCreate(taskFORMAT_ShowFormat, "Format_Show",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+
 	/******************************READ HOUR TASKS****************************/
 
 	xTaskCreate(taskREADHOUR_ReadTime, "ReadHour_Read",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ DATE TASKS****************************/
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#endif
 
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+
 	xSemaphoreGive(g_semaphore_Init);
 	for(;;)
 	{
@@ -1042,6 +1041,7 @@ void taskECO_TransmitECO(void *arg)
 		/**Print in the UART for phases*/
 		menu_EcoLCD(numberPHASE);
 		menu_EcoLCD(numberPHASE + 1);
+		LCDNokia_clear();
 		xSemaphoreGive(g_semaphore_Eco);
 	}
 }
@@ -1049,13 +1049,13 @@ void taskECO_TransmitECO(void *arg)
 /**********************************************************/
 void taskMENU_Menu(void *arg)
 {
-	const uint8_t numberMAX_MENUS = 9;
+	const uint8_t numberMAX_MENUS = 10;
 	const uint8_t numberMAX_STRING = 2;
 
 	uint8_t data;
 	uint8_t string[numberMAX_STRING];
-	uint8_t bitSet;
-	uint8_t counter;
+	uint32_t bitSet;
+	uint32_t counter;
 
 #if 0
 	/**Send the struct to RTC**/
