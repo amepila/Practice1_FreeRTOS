@@ -88,10 +88,8 @@ int main(void)
 	NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	//vTaskStartScheduler();
+	vTaskStartScheduler();
 
-	const uint8_t string1[35] = " A B 1 2 ";
-    UART_WriteBlocking(UART1, string1, sizeof(string1));
     //menu_Main1();
     for(;;)
     {

@@ -315,6 +315,7 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+
 	xTaskCreate(taskMENU_SetDate, "SetDate_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Format, "Format_Menu",
@@ -323,13 +324,12 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadDate, "ReadDate_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
+#endif
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 
 #if 0
 	/******************************READ I2C TASKS****************************/
@@ -337,9 +337,10 @@ void taskINIT(void *arg)
 	xTaskCreate(taskREADI2C_Read, "ReadI2C_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
+
 	/******************************WRITE I2C TASKS****************************/
 
-	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Write",
+	xTaskCreate(taskWRITEI2C_Write, "WriteI2C_Write",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET HOUR TASK****************************/
@@ -366,19 +367,18 @@ void taskINIT(void *arg)
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 
 	/******************************TERMINAL TASKS****************************/
 	xTaskCreate(taskTERMINAL_1, "Terminal_1",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskTERMINAL_2, "Terminal_2",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
+#endif
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+
 	xSemaphoreGive(g_semaphore_Init);
 	for(;;)
 	{
@@ -388,7 +388,7 @@ void taskINIT(void *arg)
 void taskREADI2C_Read(void *arg)
 {
 	const uint8_t size_address = 5;
-	const uint8_t size_length = 5;
+	const uint8_t size_length = 3;
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
@@ -420,7 +420,7 @@ void taskREADI2C_Read(void *arg)
 		realAddress = Convert_numberASCIItoDATA(stringAddress);
 
 		/**Print the menu by parts*/
-		menu_ReadI2C0(numberPHASE + 1);
+		menu_ReadI2C0(numberPHASE);
 
 		/**Capture the length of data*/
 		for(counter = 0; counter < size_length; counter++)
@@ -437,7 +437,7 @@ void taskREADI2C_Read(void *arg)
 		realLength = Convert_numberASCIItoDATA(stringLength);
 
 		/**Print the menu by parts*/
-		menu_ReadI2C0(numberPHASE + 2);
+		menu_ReadI2C0(numberPHASE + 1);
 
 		/**Print the data memory*/
 		for(counter = 0; counter < realLength; counter++)
@@ -449,8 +449,8 @@ void taskREADI2C_Read(void *arg)
 #endif
 		}
 		/**Print the menu by parts*/
-		menu_ReadI2C0(numberPHASE + 3);
-
+		menu_ReadI2C0(numberPHASE + 2);
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_ReadI2C);
 	}
 }
@@ -489,7 +489,7 @@ void taskWRITEI2C_Write(void *arg)
 		}
 		realAddress = Convert_numberASCIItoDATA(stringAddress);
 		/**Print the menu by parts*/
-		menu_WriteI2C0(numberPHASE + 1);
+		menu_WriteI2C0(numberPHASE);
 
 		/**Capturing the data*/
 		for(counter = 0; counter < LENGTH_DATA_MEMORY; counter++)
@@ -504,12 +504,12 @@ void taskWRITEI2C_Write(void *arg)
 			else
 			{
 				realLength = counter;
-				fifoByte_UART(UART0, &data);
 				stringData[counter] = data;
+				break;
 			}
 		}
 		/**Print the menu by parts*/
-		menu_WriteI2C0(numberPHASE + 2);
+		menu_WriteI2C0(numberPHASE + 1);
 
 		/**Writing in the E2PROM*/
 #if 0
@@ -522,8 +522,8 @@ void taskWRITEI2C_Write(void *arg)
 #endif
 		counterAddress = 0;
 		/**Print the menu by parts*/
-		menu_WriteI2C0(numberPHASE + 3);
-
+		menu_WriteI2C0(numberPHASE + 2);
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_WriteI2C);
 	}
 }
@@ -630,7 +630,7 @@ void taskSETHOUR_SetTime(void *arg)
 		/**Print in the UART for phases*/
 		menu_SetHour0(numberPHASE);
 		menu_SetHour0(numberPHASE + 1);
-
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_SetHour);
 	}
 }
@@ -725,13 +725,15 @@ void taskSETDATE_SetCalendar(void *arg)
 		/**Print in the UART for phases*/
 		menu_SetDate0(numberPHASE);
 		menu_SetDate0(numberPHASE + 1);
-
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_SetDate);
 	}
 }
 
 void taskFORMAT_ShowFormat(void *arg)
 {
+	const uint8_t stringFormat24[25] = " 24 horas\t";
+	const uint8_t stringFormat12[25] = " 12 horas\t";
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
@@ -749,12 +751,30 @@ void taskFORMAT_ShowFormat(void *arg)
 #endif
 
 		realTime = time;
+		if(FORMAT_24H == time.hour.format)
+		{
+			UART_WriteBlocking(UART0, stringFormat24, sizeof(stringFormat24));
+		}
+		else
+		{
+			UART_WriteBlocking(UART0, stringFormat12, sizeof(stringFormat12));
+		}
+
 		/**Print in the UART for phases*/
 		menu_FormatHour0(numberPHASE);
+		if(FORMAT_24H == time.hour.format)
+		{
+			UART_WriteBlocking(UART0, stringFormat12, sizeof(stringFormat12));
+		}
+		else
+		{
+			UART_WriteBlocking(UART0, stringFormat24, sizeof(stringFormat24));
+		}
 		menu_FormatHour0(numberPHASE + 1);
 
 		/**Capturing the option*/
 		fifoByte_UART(UART0, &data);
+		UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
 
 		if(('S' == data) || ('s' == data))
 		{
@@ -780,8 +800,8 @@ void taskFORMAT_ShowFormat(void *arg)
 		printTimeLCD(realTime);
 #endif
 		/**Print in the UART for phases*/
-		menu_SetDate0(numberPHASE + 2);
-
+		menu_FormatHour0(numberPHASE + 2);
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_Format);
 	}
 }
@@ -899,6 +919,8 @@ void taskECO_TransmitECO(void *arg)
 		menu_EcoLCD0(numberPHASE);
 		menu_EcoLCD0(numberPHASE + 1);
 		LCDNokia_clear();
+		fifoByte_UART(UART0, &data);
+		data = 0;
 		xSemaphoreGive(g_semaphore_Eco);
 	}
 }
@@ -994,7 +1016,7 @@ void taskMENU_Write(void *arg)
 		menu_WriteI2C0(phase);
 
 		/**Set the flag event to jump to the next task*/
-		xEventGroupSetBits(g_eventsSetHour, EVENT_WI2C_WRITE);
+		xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_WRITE);
 
 		xSemaphoreTake(g_semaphore_WriteI2C, portMAX_DELAY);
 		xSemaphoreGive(g_semaphore_Init);

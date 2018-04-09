@@ -178,9 +178,9 @@ uint8_t menu_ReadI2C0(uint8_t phase)
 	{
 		if(0 == flagContinue.flag3)
 		{
-		    UART_WriteBlocking(UART0, line11, sizeof(line11));
+		    UART_WriteBlocking(UART0, line12, sizeof(line12));
 		    UART_WriteBlocking(UART0, string3, sizeof(string3));
-		    UART_WriteBlocking(UART0, line11, sizeof(line11));
+		    UART_WriteBlocking(UART0, line15, sizeof(line15));
 
 			flagContinue.flag3 = 1;
 		}
@@ -251,9 +251,9 @@ uint8_t menu_ReadI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag3)
 		{
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, line12, sizeof(line12));
 		    UART_WriteBlocking(UART1, string3, sizeof(string3));
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, line15, sizeof(line15));
 
 			flagContinue.flag3 = 1;
 		}
@@ -311,7 +311,7 @@ uint8_t menu_WriteI2C0(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART0, line10, sizeof(line10));
+		    UART_WriteBlocking(UART0, line11, sizeof(line11));
 		    UART_WriteBlocking(UART0, string2, sizeof(string2));
 		    UART_WriteBlocking(UART0, line12, sizeof(line12));
 
@@ -372,7 +372,7 @@ uint8_t menu_WriteI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
 		    UART_WriteBlocking(UART1, string2, sizeof(string2));
 		    UART_WriteBlocking(UART1, line12, sizeof(line12));
 
