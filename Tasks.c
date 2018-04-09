@@ -48,22 +48,15 @@
 #define EVENT_TERMINAL_MENU		(1<<7)
 #define EVENT_ECO_MENU			(1<<8)
 
-#define EVENT_RI2C_ADDRESS		(1<<0)
-#define EVENT_RI2C_LENGTH		(1<<1)
-#define EVENT_RI2C_DATA			(1<<2)
-#define EVENT_RI2C_FINAL		(1<<3)
-
-#define EVENT_WI2C_ADDRESS		(1<<0)
-#define EVENT_WI2C_DATA			(1<<1)
-#define EVENT_WI2C_FINAL		(1<<2)
-#define EVENT_WI2C_FINALI2C		(1<<3)
-
+#define EVENT_RI2C_READ			(1<<0)
+#define EVENT_WI2C_WRITE		(1<<0)
 #define EVENT_HOUR_SET			(1<<0)
 #define EVENT_DATE_SET			(1<<0)
 #define EVENT_FORMAT_SET		(1<<0)
 #define EVENT_HOUR_READ			(1<<0)
 #define EVENT_DATE_READ			(1<<0)
 #define EVENT_ECO_TRANS			(1<<0)
+#define EVENT_TERMINAL			(1<<0)
 
 #define LENGHT_UART				(2)
 #define TRUE					(1)
@@ -73,16 +66,18 @@
 #define ASCII_NUMBER			(49)
 
 SemaphoreHandle_t g_semaphore_Init;
+SemaphoreHandle_t g_semaphore_ReadI2C;
+SemaphoreHandle_t g_semaphore_WriteI2C;
 SemaphoreHandle_t g_semaphore_SetHour;
 SemaphoreHandle_t g_semaphore_SetDate;
 SemaphoreHandle_t g_semaphore_Format;
 SemaphoreHandle_t g_semaphore_ReadHour;
 SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_ReadDate;
+SemaphoreHandle_t g_semaphore_Terminal2;
 SemaphoreHandle_t g_semaphore_Eco;
 
 QueueHandle_t g_Queue_ReadI2C;
-QueueHandle_t g_Queue_WriteI2C;
 
 EventGroupHandle_t g_eventsMenus;
 EventGroupHandle_t g_button_events;
@@ -93,6 +88,7 @@ EventGroupHandle_t g_eventsSetDate;
 EventGroupHandle_t g_eventsFormat;
 EventGroupHandle_t g_eventsReadHour;
 EventGroupHandle_t g_eventsReadDate;
+EventGroupHandle_t g_eventsTerminal;
 EventGroupHandle_t g_eventsEco;
 
 uart_handle_t g_uart0Handle;
@@ -119,25 +115,6 @@ typedef struct
 	uint32_t phase;
 	DataType_RI2C type;
 }DataTransfer_ReadI2C_Type;
-
-/**************Data Type Write I2C************/
-
-typedef enum
-{
-	ADDRESS_WI2C,
-	DATA_WI2C,
-	FINAL_WRITE
-}DataType_WI2C;
-
-typedef struct
-{
-	uint8_t data[LENGTH_DATA_MEMORY];
-	uint8_t size;
-	uint32_t address;
-	uint32_t phase;
-	DataType_WI2C type;
-}DataTransfer_WriteI2C_Type;
-
 
 /**Structure with the time*/
 Time_Type g_Time =
@@ -292,20 +269,17 @@ void taskINIT(void *arg)
 {
 /**********************************SEMAPHORES*************************************/
 	g_semaphore_Init = xSemaphoreCreateBinary();
+	g_semaphore_ReadI2C = xSemaphoreCreateBinary();
+	g_semaphore_WriteI2C = xSemaphoreCreateBinary();
 	g_semaphore_SetHour = xSemaphoreCreateBinary();
 	g_semaphore_SetDate = xSemaphoreCreateBinary();
 	g_semaphore_Format = xSemaphoreCreateBinary();
 	g_semaphore_ReadHour = xSemaphoreCreateBinary();
 	g_semaphore_ReadDate = xSemaphoreCreateBinary();
+	g_semaphore_Terminal2 = xSemaphoreCreateBinary();
 	g_semaphore_Eco = xSemaphoreCreateBinary();
 
 /**********************************QUEUES*****************************************/
-	g_Queue_ReadI2C = xQueueCreate(3,
-			sizeof(DataTransfer_ReadI2C_Type));
-#if 0
-	g_Queue_WriteI2C = xQueueCreate(2,
-			sizeof(DataTransfer_WriteI2C_Type));
-#endif
 
 /**********************************EVENTS*****************************************/
 	g_button_events = xEventGroupCreate();
@@ -317,6 +291,7 @@ void taskINIT(void *arg)
 	g_eventsFormat = xEventGroupCreate();
 	g_eventsReadHour = xEventGroupCreate();
 	g_eventsReadDate = xEventGroupCreate();
+	g_eventsTerminal = xEventGroupCreate();
 	g_eventsEco = xEventGroupCreate();
 
 
@@ -324,9 +299,9 @@ void taskINIT(void *arg)
 	/******************************MENU TASKS****************************/
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
 	xTaskCreate(taskMENU_Read, "Read_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#if 0
 	xTaskCreate(taskMENU_Write, "Write_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
@@ -341,31 +316,19 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+#endif
 	/******************************READ I2C TASKS****************************/
-#if 0
-	xTaskCreate(taskREADI2C_Address, "ReadI2C_Address",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskREADI2C_Lenght, "ReadI2C_Lenght",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskREADI2C_Data, "ReadI2C_Data",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskREADI2C_FinalRead, "ReadI2C_Final",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
 
+	xTaskCreate(taskREADI2C_Read, "ReadI2C_Read",
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#if 0
 	/******************************WRITE I2C TASKS****************************/
 
-	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Address",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskWRITEI2C_DataWrite, "WriteI2C_Write",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskWRITEI2C_FinalWrite, "WriteI2C_Final",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
-	xTaskCreate(taskWRITEI2C_FinalWriteI2C, "WriteI2C_FinalI2C",
-			configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-1, NULL);
+	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Write",
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET HOUR TASK****************************/
 
@@ -391,333 +354,158 @@ void taskINIT(void *arg)
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
 
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+#endif
 	xSemaphoreGive(g_semaphore_Init);
 	for(;;)
 	{
 	}
 }
 
-void taskREADI2C_Address(void *arg)
+void taskREADI2C_Read(void *arg)
 {
-	const uint8_t numberMAX_STRING = 5;
+	const uint8_t size_address = 5;
+	const uint8_t size_length = 5;
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
 	uint8_t counter;
 	uint32_t realAddress;
-	uint8_t string[numberMAX_STRING];
-	DataTransfer_ReadI2C_Type *data_queue;
+	uint32_t realLength;
+	uint8_t stringAddress[size_address];
+	uint8_t stringLength[size_length];
 
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsReadI2C,
-				(EVENT_RI2C_ADDRESS), pdTRUE,
+				(EVENT_RI2C_READ), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
-		for(counter = 0; counter < numberMAX_STRING; counter++)
+		/**Capture the address of data*/
+		for(counter = 0; counter < size_address; counter++)
 		{
 			fifoByte_UART0(&data);
-			string[counter] = data;
+			stringAddress[counter] = data;
 
-			if(ASCII_CR != string[counter])
+			if(ASCII_CR != stringAddress[counter])
 			{
-			    UART_WriteBlocking(UART0, &string[counter],
+			    UART_WriteBlocking(UART0, &stringAddress[counter],
 			    		sizeof(uint8_t));
 			}
 		}
-		realAddress = Convert_numberASCIItoDATA(string);
+		realAddress = Convert_numberASCIItoDATA(stringAddress);
 
-		data_queue = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
-		data_queue->address = realAddress;
-		data_queue->phase = numberPHASE;
-		data_queue->type = ADDRESS_RI2C;
-		xQueueSend(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
+		/**Print the menu by parts*/
+		menu_ReadI2C(numberPHASE + 1);
 
-		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
-	}
-}
-
-void taskREADI2C_Lenght(void *arg)
-{
-	const uint8_t numberMAX_STRING = 3;
-	const uint8_t numberPHASE = 2;
-
-	uint8_t data;
-	uint8_t counter;
-	uint32_t realLength;
-	uint8_t string[numberMAX_STRING];
-	DataTransfer_ReadI2C_Type *data_queue;
-
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
-				(EVENT_RI2C_LENGTH), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
-		for(counter = 0; counter < numberMAX_STRING; counter++)
+		/**Capture the length of data*/
+		for(counter = 0; counter < size_length; counter++)
 		{
 			fifoByte_UART0(&data);
-			string[counter] = data;
+			stringLength[counter] = data;
 
-			if(ASCII_CR != string[counter])
+			if(ASCII_CR != stringLength[counter])
 			{
-			    UART_WriteBlocking(UART0, &string[counter],
+			    UART_WriteBlocking(UART0, &stringLength[counter],
 			    		sizeof(uint8_t));
 			}
 		}
-		realLength = Convert_numberASCIItoDATA(string);
+		realLength = Convert_numberASCIItoDATA(stringLength);
 
-		data_queue = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
-		data_queue->length = realLength;
-		data_queue->phase = numberPHASE;
-		data_queue->type = LENGTH_RI2C;
-		xQueueSend(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
-
-		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
-	}
-}
-
-void taskREADI2C_Data(void *arg)
-{
-	const uint8_t numberPHASE = 3;
-	const uint8_t test[8] = "Hola\n";
-
-	uint8_t counter;
-	uint32_t realLength;
-	uint32_t realAddress;
-	DataTransfer_ReadI2C_Type *data_queueReceived;
-	DataTransfer_ReadI2C_Type *data_queueSend;
-
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
-				(EVENT_RI2C_DATA), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
-		/**Queue is received with the address and length*/
-		xQueuePeek(g_Queue_ReadI2C, &data_queueReceived,
-				portMAX_DELAY);
-		switch(data_queueReceived->type)
-		{
-		case (ADDRESS_RI2C):
-				realAddress = data_queueReceived->address;
-			break;
-		case (LENGTH_RI2C):
-				realLength = data_queueReceived->length;
-			break;
-		default:
-			break;
-		}
+		/**Print the menu by parts*/
+		menu_ReadI2C(numberPHASE + 2);
 
 		/**Print the data memory*/
 		for(counter = 0; counter < realLength; counter++)
 		{
 #if 0
-			UART_WriteBlocking(UART0,
-			readMemory(realAddress + counterChar),
+			UART_WriteBlocking(UART0, readMemory(realAddress + counter),
 			sizeof(uint8_t));
 			E2PROM(6500);
 #endif
 		}
-		/**Testing*/
-		UART_WriteBlocking(UART0, test, sizeof(test));
+		/**Print the menu by parts*/
+		menu_ReadI2C(numberPHASE + 3);
 
-		/**Send the final element of the queue*/
-		data_queueSend = pvPortMalloc(sizeof(DataTransfer_ReadI2C_Type));
-		data_queueSend->phase = numberPHASE;
-		data_queueSend->type = DATA_RI2C;
-		xQueueSend(g_Queue_ReadI2C, &data_queueSend, portMAX_DELAY);
-
-		xEventGroupSetBits(g_eventsMenus, EVENT_READ_MENU);
+		xSemaphoreGive(g_semaphore_ReadI2C);
 	}
 }
 
-void taskREADI2C_FinalRead(void *arg)
+void taskWRITEI2C_Write(void *arg)
 {
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsReadI2C,
-				(EVENT_RI2C_FINAL), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
-		vPortFree(g_Queue_ReadI2C);
-		xSemaphoreGive(g_semaphore_Init);
-	}
-}
-
-void taskWRITEI2C_AddressWrite(void *arg)
-{
-	const uint8_t numberMAX_STRING = 5;
+	const uint8_t size_address = 5;
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
 	uint8_t counter;
+	uint8_t counterAddress = 0;
 	uint32_t realAddress;
-	uint8_t string[numberMAX_STRING];
-	DataTransfer_WriteI2C_Type *data_queue;
+	uint32_t realLength;
+	uint8_t stringAddress[size_address];
+	uint8_t stringData[LENGTH_DATA_MEMORY];
 
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsWriteI2C,
-				(EVENT_WI2C_ADDRESS), pdTRUE,
+				(EVENT_WI2C_WRITE), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
-		for(counter = 0; counter < numberMAX_STRING; counter++)
+		/**Capturing the address*/
+		for(counter = 0; counter < size_address; counter++)
 		{
 			fifoByte_UART0(&data);
-			string[counter] = data;
+			stringAddress[counter] = data;
 
-			if(ASCII_CR != string[counter])
+			if(ASCII_CR != stringAddress[counter])
 			{
-			    UART_WriteBlocking(UART0, &string[counter],
+			    UART_WriteBlocking(UART0, &stringAddress[counter],
 			    		sizeof(uint8_t));
 			}
 		}
-		realAddress = Convert_numberASCIItoDATA(string);
+		realAddress = Convert_numberASCIItoDATA(stringAddress);
+		/**Print the menu by parts*/
+		menu_WriteI2C(numberPHASE + 1);
 
-		data_queue = pvPortMalloc(sizeof(DataTransfer_WriteI2C_Type));
-		data_queue->address = realAddress;
-		data_queue->phase = numberPHASE;
-		data_queue->type = ADDRESS_WI2C;
-		xQueueSend(g_Queue_WriteI2C, &data_queue, portMAX_DELAY);
-
-		xEventGroupSetBits(g_eventsMenus, EVENT_WRITE_MENU);
-	}
-}
-
-void taskWRITEI2C_DataWrite(void *arg)
-{
-	const uint8_t numberPHASE = 2;
-
-	uint8_t data;
-	uint8_t counter;
-	uint8_t sizeData;
-	uint8_t string[LENGTH_DATA_MEMORY];
-	DataTransfer_WriteI2C_Type *data_queue;
-
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
-				(EVENT_WI2C_DATA), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
+		/**Capturing the data*/
 		for(counter = 0; counter < LENGTH_DATA_MEMORY; counter++)
 		{
 			fifoByte_UART0(&data);
 			if(ASCII_CR != data)
 			{
-				string[counter] = data;
-			    UART_WriteBlocking(UART0, &string[counter],
+				stringData[counter] = data;
+			    UART_WriteBlocking(UART0, &stringData[counter],
 			    		sizeof(uint8_t));
 			}
 			else
 			{
-				sizeData = counter;
+				realLength = counter;
 				fifoByte_UART0(&data);
-				string[counter] = data;
+				stringData[counter] = data;
 			}
 		}
-		data_queue = pvPortMalloc(sizeof(DataTransfer_WriteI2C_Type));
+		/**Print the menu by parts*/
+		menu_WriteI2C(numberPHASE + 2);
 
-		for(counter = 0; counter < sizeData; counter++)
-		{
-			data_queue->data[counter] = string[counter];
-		}
-		data_queue->phase = numberPHASE;
-		data_queue->type = DATA_WI2C;
-		data_queue->size = sizeData;
-		xQueueSend(g_Queue_WriteI2C, &data_queue, portMAX_DELAY);
-
-		xEventGroupSetBits(g_eventsMenus, EVENT_WRITE_MENU);
-	}
-}
-
-void taskWRITEI2C_FinalWrite(void *arg)
-{
-	const uint8_t numberPHASE = 3;
-
-	uint8_t data;
-	uint8_t counter;
-	uint8_t size;
-	uint32_t address;
-	uint8_t counterAddress = 0;
-	uint8_t string[LENGTH_DATA_MEMORY];
-	DataTransfer_WriteI2C_Type *data_queueReceived;
-	DataTransfer_WriteI2C_Type *data_queueSend;
-
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
-				(EVENT_WI2C_FINAL), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
-		/**Queue is received to get the phase*/
-		do
-		{
-			xQueueReceive(g_Queue_WriteI2C, &data_queueReceived,
-					portMAX_DELAY);
-			switch(data_queueReceived->phase)
-			{
-			case 1:
-				address = data_queueReceived->address;
-				break;
-			case 2:
-				size = data_queueReceived->size;
-				for(counter = 0; counter < LENGTH_DATA_MEMORY;
-						counter++)
-				{
-					string[counter] = data_queueReceived->data[counter];
-				}
-				break;
-			default:
-				break;
-			}
-			vPortFree(data_queueReceived);
-		}
-		while(0 != uxQueueMessagesWaiting(g_Queue_WriteI2C));
+		/**Writing in the E2PROM*/
 #if 0
-		for(counter = size; counter != 0; counter--)
+		for(counter = realLength; counter != 0; counter--)
 		{
-			writeMemory((address + counterAddress), string[counterAddress]);
+			writeMemory((realAddress + counterAddress), string[counterAddress]);
 			counterAddress++;
 			E2PROMdelay(65000);
 		}
 #endif
 		counterAddress = 0;
-		data_queueSend = pvPortMalloc(sizeof(DataTransfer_WriteI2C_Type));
-		data_queueSend->type = FINAL_WRITE;
-		data_queueSend->phase = numberPHASE;
-		xQueueSend(g_Queue_WriteI2C, &data_queueSend, portMAX_DELAY);
+		/**Print the menu by parts*/
+		menu_WriteI2C(numberPHASE + 3);
 
-		xEventGroupSetBits(g_eventsMenus, EVENT_WRITE_MENU);
-	}
-}
-
-void taskWRITEI2C_FinalWriteI2C(void *arg)
-{
-	for(;;)
-	{
-		/**Wait the event flag to continue the task*/
-		xEventGroupWaitBits(g_eventsWriteI2C,
-				(EVENT_WI2C_FINALI2C), pdTRUE,
-				pdTRUE, portMAX_DELAY);
-
-		vPortFree(g_Queue_WriteI2C);
-		xSemaphoreGive(g_semaphore_Init);
+		xSemaphoreGive(g_semaphore_WriteI2C);
 	}
 }
 
@@ -1049,7 +837,7 @@ void taskECO_TransmitECO(void *arg)
 /**********************************************************/
 void taskMENU_Menu(void *arg)
 {
-	const uint8_t numberMAX_MENUS = 10;
+	const uint8_t numberMAX_MENUS = 9;
 	const uint8_t numberMAX_STRING = 2;
 
 	uint8_t data;
@@ -1095,10 +883,7 @@ void taskMENU_Menu(void *arg)
 void taskMENU_Read(void *arg)
 {
 	Time_Type time;
-	uint32_t phase = 0;
-	uint8_t lockQueue = pdTRUE;
-	DataTransfer_ReadI2C_Type *data_queue;
-
+	uint8_t phase = 0;
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
@@ -1110,52 +895,14 @@ void taskMENU_Read(void *arg)
 		time = getTime();
 		printTimeLCD(time);
 #endif
-		/**Print the menu by parts*/
+		/**Print in the UART for phases*/
 		menu_ReadI2C(phase);
 
-		if(pdFALSE == lockQueue)
-		{
-			/**Queue is peeked to get the phase*/
-			xQueuePeek(g_Queue_ReadI2C, &data_queue, portMAX_DELAY);
-			switch(data_queue->type)
-			{
-			case ADDRESS_RI2C:
-				phase = data_queue->phase;
-				break;
-			case LENGTH_RI2C:
-				phase = data_queue->phase;
-				break;
-			case DATA_RI2C:
-				phase = data_queue->phase;
-				break;
-			default:
-				break;
-			}
-		}
 		/**Set the flag event to jump to the next task*/
-		switch(phase)
-		{
-		case 0:
-			/**Jump to ReadI2C Address*/
-			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_ADDRESS);
-			lockQueue = pdFALSE;
-			break;
-		case 1:
-			/**Jump to ReadI2C Length*/
-			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_LENGTH);
-			break;
-		case 2:
-			/**Jump to ReadI2C Data*/
-			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_DATA);
-			break;
-		case 3:
-			/**Jump to ReadI2C Final*/
-			xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_FINAL);
-			lockQueue = pdTRUE;
-			break;
-		default:
-			break;
-		}
+		xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_READ);
+
+		xSemaphoreTake(g_semaphore_ReadI2C, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
 
@@ -1163,9 +910,6 @@ void taskMENU_Write(void *arg)
 {
 	Time_Type time;
 	uint8_t phase = 0;
-	uint8_t lockQueue = pdTRUE;
-	DataTransfer_WriteI2C_Type *data_queue;
-
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
@@ -1177,53 +921,14 @@ void taskMENU_Write(void *arg)
 		time = getTime();
 		printTimeLCD(time);
 #endif
-		/**Print the menu by parts*/
+		/**Print in the UART for phases*/
 		menu_WriteI2C(phase);
 
-		if(pdFALSE == lockQueue)
-		{
-			/**Queue is peeked to get the phase*/
-			xQueuePeek(g_Queue_WriteI2C, &data_queue, portMAX_DELAY);
-			switch(data_queue->type)
-			{
-			case ADDRESS_WI2C:
-				phase = data_queue->phase;
-				break;
-			case DATA_WI2C:
-				phase = data_queue->phase;
-				break;
-			case FINAL_WRITE:
-				phase = data_queue->phase;
-				break;
-			default:
-				break;
-			}
-		}
-
 		/**Set the flag event to jump to the next task*/
-		switch(phase)
-		{
-		case 0:
-			/**Jump to WriteI2C Address*/
-			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_ADDRESS);
-			lockQueue = pdFALSE;
-			break;
-		case 1:
-			/**Jump to WriteI2C Data*/
-			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_DATA);
-			break;
-		case 2:
-			/**Jump to WriteI2C Final*/
-			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_FINAL);
-			break;
-		case 3:
-			/**Jump to WriteI2C FinalI2C*/
-			xEventGroupSetBits(g_eventsWriteI2C, EVENT_WI2C_FINALI2C);
-			lockQueue = pdTRUE;
-			break;
-		default:
-			break;
-		}
+		xEventGroupSetBits(g_eventsSetHour, EVENT_WI2C_WRITE);
+
+		xSemaphoreTake(g_semaphore_WriteI2C, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
 
@@ -1359,10 +1064,25 @@ void taskMENU_ReadDate(void *arg)
 
 void taskMENU_Terminal2(void *arg)
 {
-
+	uint8_t phase = 0;
+	Time_Type time;
 	for(;;)
 	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsMenus,
+				(EVENT_TERMINAL_MENU), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+#if 0
+		/**Print the time in LCD*/
+		time = getTime();
+		printTimeLCD(time);
+#endif
 
+		/**Set the flag event to jump to the next task*/
+		xEventGroupSetBits(g_eventsTerminal, EVENT_TERMINAL);
+
+		xSemaphoreTake(g_semaphore_Terminal2, portMAX_DELAY);
+		xSemaphoreGive(g_semaphore_Init);
 	}
 }
 

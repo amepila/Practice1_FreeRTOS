@@ -74,22 +74,10 @@ void fifoByte_UART0(uint8_t *byte);
 void taskINIT(void *arg);
 
 
-void taskREADI2C_Address(void *arg);
-
-void taskREADI2C_Lenght(void *arg);
-
-void taskREADI2C_Data(void *arg);
-
-void taskREADI2C_FinalRead(void *arg);
+void taskREADI2C_Read(void *arg);
 
 
-void taskWRITEI2C_AddressWrite(void *arg);
-
-void taskWRITEI2C_DataWrite(void *arg);
-
-void taskWRITEI2C_FinalWrite(void *arg);
-
-void taskWRITEI2C_FinalWriteI2C(void *arg);
+void taskWRITEI2C_Write(void *arg);
 
 
 void taskSETHOUR_SetTime(void *arg);
