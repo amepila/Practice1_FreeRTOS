@@ -33,6 +33,7 @@
  * @brief   Application entry point.
  */
 #include <stdio.h>
+#include <threads.h>
 #include "board.h"
 #include "peripherals.h"
 #include "pin_mux.h"
@@ -44,12 +45,9 @@
 #include "fsl_port.h"
 #include "fsl_debug_console.h"
 #include "FreeRTOS.h"
-#include "task.h"
 #include "semphr.h"
 #include "queue.h"
 #include "event_groups.h"
-#include "Task.h"
-
 #include "Menu.h"
 
 #define BIT2	(2)
@@ -88,8 +86,7 @@ int main(void)
 	NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	//vTaskStartScheduler();
-    menu_Main1();
+	vTaskStartScheduler();
     for(;;)
     {
 	}

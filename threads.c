@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <threads.h>
 #include "board.h"
 #include "peripherals.h"
 #include "pin_mux.h"
@@ -24,7 +25,6 @@
 #include "semphr.h"
 #include "queue.h"
 #include "event_groups.h"
-#include "Task.h"
 
 #define BUTTON_1	(1<<2)
 #define BUTTON_2	(1<<5)
@@ -208,7 +208,7 @@ static void uart1_transfer_callback(UART_Type *base, uart_handle_t *handle,
 	}
 }
 
-status_t init_UART0(void)
+void init_UART0(void)
 {
     uart_config_t uart0Config;
 
@@ -220,11 +220,9 @@ status_t init_UART0(void)
     UART_Init(UART0,&uart0Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
     UART_TransferCreateHandle(UART0, &g_uart0Handle,
     		uart0_transfer_callback, NULL);
-
-	return (kStatus_Success);
 }
 
-status_t init_UART1(void)
+void init_UART1(void)
 {
 	CLOCK_EnableClock(kCLOCK_PortC);
 	PORT_SetPinMux(PORTC, 4, kPORT_MuxAlt3);
@@ -241,8 +239,6 @@ status_t init_UART1(void)
     UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
     UART_TransferCreateHandle(UART1, &g_uart1Handle,
     		uart1_transfer_callback, NULL);
-
-	return (kStatus_Success);
 }
 
 void fifoByte_UART(UART_Type *base, uint8_t *byte)
@@ -276,6 +272,7 @@ void fifoByte_UART(UART_Type *base, uint8_t *byte)
 
 void taskINIT(void *arg)
 {
+
 /**********************************SEMAPHORES*************************************/
 	g_semaphore_Init = xSemaphoreCreateBinary();
 	g_semaphore_ReadI2C = xSemaphoreCreateBinary();

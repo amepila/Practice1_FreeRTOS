@@ -5,8 +5,15 @@
  *      Author: Andres Hernandez
  */
 
-#ifndef TASK_H_
-#define TASK_H_
+#ifndef THREADS_H_
+#define THREADS_H_
+
+#include <stdio.h>
+#include "board.h"
+#include "peripherals.h"
+#include "pin_mux.h"
+#include "clock_config.h"
+#include "MK64F12.h"
 
 /**
  * \brief This data type define the states of hour format
@@ -65,9 +72,9 @@ typedef struct
 	uint32_t modifyDate;
 }Time_Type;
 
-status_t init_UART0(void);
+void init_UART0(void);
 
-status_t init_UART1(void);
+void init_UART1(void);
 
 void fifoByte_UART0(uint8_t *byte);
 
@@ -122,4 +129,4 @@ void taskMENU_Terminal2(void *arg);
 void taskMENU_Eco(void *arg);
 
 
-#endif /* TASK_H_ */
+#endif /* THREADS_H_ */
