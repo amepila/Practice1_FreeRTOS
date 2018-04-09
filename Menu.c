@@ -134,7 +134,7 @@ uint8_t menu_Main1(void)
 	return (1);
 }
 
-uint8_t menu_ReadI2C(uint8_t phase)
+uint8_t menu_ReadI2C0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -207,8 +207,81 @@ uint8_t menu_ReadI2C(uint8_t phase)
 	return 1;
 }
 
+uint8_t menu_ReadI2C1(uint8_t phase)
+{
 
-uint8_t menu_WriteI2C(uint8_t phase)
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "Direccion de la lectura:\t";
+	const uint8_t string2[35] = "Longitud en bytes: \t";
+	const uint8_t string3[35] = "Contenido: \r";
+	const uint8_t string4[40] = "Presione una tecla para continuar....\r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		flagContinue.flag4 = 0;
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 2)
+	{
+		if(0 == flagContinue.flag3)
+		{
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, string3, sizeof(string3));
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+
+			flagContinue.flag3 = 1;
+		}
+		return 0;
+	}
+
+
+	if(phase == 3)
+	{
+		if(0  == flagContinue.flag4)
+		{
+		    UART_WriteBlocking(UART1, line16, sizeof(line16));
+		    UART_WriteBlocking(UART1, string4, sizeof(string4));
+
+			flagContinue.flag4 = 1;
+		}
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+		flagContinue.flag3 = 0;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+
+uint8_t menu_WriteI2C0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -269,7 +342,67 @@ uint8_t menu_WriteI2C(uint8_t phase)
 	return 1;
 }
 
-uint8_t menu_SetHour(uint8_t phase)
+uint8_t menu_WriteI2C1(uint8_t phase)
+{
+
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "Direccion de la escritura:\t";
+	const uint8_t string2[35] = "Texto a guardar: \r";
+	const uint8_t string3[35] = "Su texto ha sido guardado...\r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART1, line12, sizeof(line12));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+	if(phase ==  2)
+	{
+		if(0 == flagContinue.flag3)
+		{
+		    UART_WriteBlocking(UART1, line13, sizeof(line13));
+		    UART_WriteBlocking(UART1, string3, sizeof(string3));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line14, sizeof(line14));
+
+			flagContinue.flag3 = 1;
+		}
+
+		return 0;
+	}
+	if(phase == 3)
+	{
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+		flagContinue.flag3 = 0;
+	}
+	return 1;
+}
+uint8_t menu_SetHour0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -319,8 +452,57 @@ uint8_t menu_SetHour(uint8_t phase)
 	}
 	return 1;
 }
+uint8_t menu_SetHour1(uint8_t phase)
+{
 
-uint8_t menu_SetDate(uint8_t phase)
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "Escribir hora en hh/mm/ss:\t";
+	const uint8_t string2[35] = "La hora ha sido cambiada...: \r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line12, sizeof(line12));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line20, sizeof(line20));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 2)
+	{
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+
+		return 0;
+	}
+	return 1;
+}
+
+uint8_t menu_SetDate0(uint8_t phase)
 {
 	static Flags_Type flagContinue;
 	const uint8_t string1[35] = "Escribir fecha: en dd/mm/aa:\t";
@@ -367,8 +549,54 @@ uint8_t menu_SetDate(uint8_t phase)
 	}
 	return 1;
 }
+uint8_t menu_SetDate1(uint8_t phase)
+{
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "Escribir fecha: en dd/mm/aa:\t";
+	const uint8_t string2[35] = "La hora ha sido cambiada: \r";
 
-uint8_t menu_FormatHour(uint8_t phase)
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line20, sizeof(line20));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+
+	if(phase ==  2)
+	{
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+
+		return 0;
+	}
+	return 1;
+}
+uint8_t menu_FormatHour0(uint8_t phase)
 {
 	static Flags_Type flagContinue;
 	const uint8_t string1[35] = "El formato de hora actual es  ";
@@ -439,7 +667,77 @@ uint8_t menu_FormatHour(uint8_t phase)
 	return 1;
 }
 
-uint8_t menu_ReadHour(uint8_t phase)
+uint8_t menu_FormatHour1(uint8_t phase)
+{
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "El formato de hora actual es  ";
+	const uint8_t string2[35] = "Desea cambiar el formato a  ";
+	const uint8_t string3[35] = "si/no?\t";
+	const uint8_t string4[40] = "El formato de la hora ha sido cambiado\r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			flagContinue.flag4 = 0;
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 2)
+	{
+		if(0 == flagContinue.flag3)
+		{
+		    UART_WriteBlocking(UART1, string3, sizeof(string3));
+
+			flagContinue.flag3 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 3)
+	{
+		if(0 == flagContinue.flag4)
+		{
+		    UART_WriteBlocking(UART1, line12, sizeof(line12));
+		    UART_WriteBlocking(UART1, string4, sizeof(string4));
+
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line20, sizeof(line20));
+
+			flagContinue.flag4 = 1;
+		}
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+		flagContinue.flag3 = 0;
+
+		return 0;
+	}
+	return 1;
+}
+uint8_t menu_ReadHour0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -470,8 +768,38 @@ uint8_t menu_ReadHour(uint8_t phase)
 	}
 	return 1;
 }
+uint8_t menu_ReadHour1(uint8_t phase)
+{
 
-uint8_t menu_ReadDate(uint8_t phase)
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "La hora actual es: ";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		flagContinue.flag1 = 0;
+		return 0;
+	}
+	return 1;
+}
+uint8_t menu_ReadDate0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -489,6 +817,37 @@ uint8_t menu_ReadDate(uint8_t phase)
 			/** VT100 command for positioning the cursor in x and y position*/
 		    UART_WriteBlocking(UART0, line10, sizeof(line10));
 		    UART_WriteBlocking(UART0, string1, sizeof(string1));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		flagContinue.flag1 = 0;
+		return 0;
+	}
+	return 1;
+}
+uint8_t menu_ReadDate1(uint8_t phase)
+{
+
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "La fecha actual es: ";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -536,7 +895,7 @@ uint8_t menu_CommTerminal2(uint8_t phase)
 	return 1;
 }
 
-uint8_t menu_EcoLCD(uint8_t phase)
+uint8_t menu_EcoLCD0(uint8_t phase)
 {
 
 	static Flags_Type flagContinue;
@@ -582,3 +941,48 @@ uint8_t menu_EcoLCD(uint8_t phase)
 	return 1;
 }
 
+uint8_t menu_EcoLCD1(uint8_t phase)
+{
+
+	static Flags_Type flagContinue;
+	const uint8_t string1[35] = "Escribir texto 1: \r";
+	const uint8_t string2[35] = "Termino la conexion...\r";
+
+	/**The following sentences send strings to PC using the UART_putString function. Also, the string
+	 * is coded with terminal code*/
+
+	if(phase == 0)
+	{
+		if(0 == flagContinue.flag1)
+		{
+			/*VT100 command for clearing the screen*/
+		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+			/** VT100 command for positioning the cursor in x and y position*/
+		    UART_WriteBlocking(UART1, line10, sizeof(line10));
+		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+
+			flagContinue.flag1 = 1;
+		}
+		return 0;
+	}
+
+	if(phase == 1)
+	{
+		if(0 == flagContinue.flag2)
+		{
+		    UART_WriteBlocking(UART1, line13, sizeof(line13));
+		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+
+			flagContinue.flag2 = 1;
+		}
+		return 0;
+	}
+	if(phase == 2)
+	{
+		flagContinue.flag1 = 0;
+		flagContinue.flag2 = 0;
+		return 0;
+	}
+	return 1;
+}

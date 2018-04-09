@@ -94,6 +94,7 @@ void taskREADHOUR_ReadTime(void *arg);
 
 void taskREADDATE_ReadCalendar(void *arg);
 
+void taskTERMINAL_2(void *arg);
 
 void taskECO_TransmitECO(void *arg);
 

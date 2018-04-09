@@ -140,7 +140,8 @@ typedef enum
 	ASCII_9 = '9',
 	ASCII_CR = '\r',
 	ASCII_DIAG = '/',
-	ASCII_DOUBLEPOINT = ':'
+	ASCII_DOUBLEPOINT = ':',
+	ASCII_ESC = 27
 }g_codeASCII_num;
 
 /**ASCII Code to Esc and CR*/
@@ -252,16 +253,32 @@ status_t init_UART1(void)
 	return (kStatus_Success);
 }
 
-void fifoByte_UART0(uint8_t *byte)
+void fifoByte_UART(UART_Type *base, uint8_t *byte)
 {
-	g_receiveXUart0.data = byte;
-	g_receiveXUart0.dataSize = sizeof(uint8_t);
-	rx0Finished = false;
-
-	UART_TransferReceiveNonBlocking(UART0,
-			&g_uart0Handle, &g_receiveXUart0, NULL);
-	while (!rx0Finished)
+	if(base == UART0)
 	{
+		g_receiveXUart0.data = byte;
+		g_receiveXUart0.dataSize = sizeof(uint8_t);
+		rx0Finished = false;
+
+		UART_TransferReceiveNonBlocking(UART0,
+				&g_uart0Handle, &g_receiveXUart0, NULL);
+		while (!rx0Finished)
+		{
+		}
+	}
+
+	if(base == UART1)
+	{
+		g_receiveXUart1.data = byte;
+		g_receiveXUart1.dataSize = sizeof(uint8_t);
+		rx1Finished = false;
+
+		UART_TransferReceiveNonBlocking(UART1,
+				&g_uart1Handle, &g_receiveXUart1, NULL);
+		while (!rx1Finished)
+		{
+		}
 	}
 }
 
@@ -355,6 +372,10 @@ void taskINIT(void *arg)
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
+	/******************************READ DATE TASKS****************************/
+	xTaskCreate(taskTERMINAL_2, "Terminal_2",
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
@@ -389,7 +410,7 @@ void taskREADI2C_Read(void *arg)
 		/**Capture the address of data*/
 		for(counter = 0; counter < size_address; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			stringAddress[counter] = data;
 
 			if(ASCII_CR != stringAddress[counter])
@@ -401,12 +422,12 @@ void taskREADI2C_Read(void *arg)
 		realAddress = Convert_numberASCIItoDATA(stringAddress);
 
 		/**Print the menu by parts*/
-		menu_ReadI2C(numberPHASE + 1);
+		menu_ReadI2C0(numberPHASE + 1);
 
 		/**Capture the length of data*/
 		for(counter = 0; counter < size_length; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			stringLength[counter] = data;
 
 			if(ASCII_CR != stringLength[counter])
@@ -418,7 +439,7 @@ void taskREADI2C_Read(void *arg)
 		realLength = Convert_numberASCIItoDATA(stringLength);
 
 		/**Print the menu by parts*/
-		menu_ReadI2C(numberPHASE + 2);
+		menu_ReadI2C0(numberPHASE + 2);
 
 		/**Print the data memory*/
 		for(counter = 0; counter < realLength; counter++)
@@ -430,7 +451,7 @@ void taskREADI2C_Read(void *arg)
 #endif
 		}
 		/**Print the menu by parts*/
-		menu_ReadI2C(numberPHASE + 3);
+		menu_ReadI2C0(numberPHASE + 3);
 
 		xSemaphoreGive(g_semaphore_ReadI2C);
 	}
@@ -459,7 +480,7 @@ void taskWRITEI2C_Write(void *arg)
 		/**Capturing the address*/
 		for(counter = 0; counter < size_address; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			stringAddress[counter] = data;
 
 			if(ASCII_CR != stringAddress[counter])
@@ -470,12 +491,12 @@ void taskWRITEI2C_Write(void *arg)
 		}
 		realAddress = Convert_numberASCIItoDATA(stringAddress);
 		/**Print the menu by parts*/
-		menu_WriteI2C(numberPHASE + 1);
+		menu_WriteI2C0(numberPHASE + 1);
 
 		/**Capturing the data*/
 		for(counter = 0; counter < LENGTH_DATA_MEMORY; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			if(ASCII_CR != data)
 			{
 				stringData[counter] = data;
@@ -485,12 +506,12 @@ void taskWRITEI2C_Write(void *arg)
 			else
 			{
 				realLength = counter;
-				fifoByte_UART0(&data);
+				fifoByte_UART(UART0, &data);
 				stringData[counter] = data;
 			}
 		}
 		/**Print the menu by parts*/
-		menu_WriteI2C(numberPHASE + 2);
+		menu_WriteI2C0(numberPHASE + 2);
 
 		/**Writing in the E2PROM*/
 #if 0
@@ -503,7 +524,7 @@ void taskWRITEI2C_Write(void *arg)
 #endif
 		counterAddress = 0;
 		/**Print the menu by parts*/
-		menu_WriteI2C(numberPHASE + 3);
+		menu_WriteI2C0(numberPHASE + 3);
 
 		xSemaphoreGive(g_semaphore_WriteI2C);
 	}
@@ -553,7 +574,7 @@ void taskSETHOUR_SetTime(void *arg)
 		/**Capturing the hour*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			hours[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -570,7 +591,7 @@ void taskSETHOUR_SetTime(void *arg)
 		/**Capturing the minutes*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			minutes[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -587,7 +608,7 @@ void taskSETHOUR_SetTime(void *arg)
 		/**Capturing the seconds*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			seconds[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -609,8 +630,8 @@ void taskSETHOUR_SetTime(void *arg)
 		rtcTime->hour = realTime.hour;
 
 		/**Print in the UART for phases*/
-		menu_SetHour(numberPHASE);
-		menu_SetHour(numberPHASE + 1);
+		menu_SetHour0(numberPHASE);
+		menu_SetHour0(numberPHASE + 1);
 
 		xSemaphoreGive(g_semaphore_SetHour);
 	}
@@ -650,7 +671,7 @@ void taskSETDATE_SetCalendar(void *arg)
 		/**Capturing the day*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			day[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -667,7 +688,7 @@ void taskSETDATE_SetCalendar(void *arg)
 		/**Capturing the month*/
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			month[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -684,7 +705,7 @@ void taskSETDATE_SetCalendar(void *arg)
 		/**Capturing the year*/
 		for(counter = 0; counter < (numberMAX_STRING + 2); counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			year[counter] = data;
 			if(ASCII_CR != data)
 			{
@@ -704,8 +725,8 @@ void taskSETDATE_SetCalendar(void *arg)
 		rtcTime->date = realTime.date;
 
 		/**Print in the UART for phases*/
-		menu_SetDate(numberPHASE);
-		menu_SetDate(numberPHASE + 1);
+		menu_SetDate0(numberPHASE);
+		menu_SetDate0(numberPHASE + 1);
 
 		xSemaphoreGive(g_semaphore_SetDate);
 	}
@@ -731,11 +752,11 @@ void taskFORMAT_ShowFormat(void *arg)
 
 		realTime = time;
 		/**Print in the UART for phases*/
-		menu_FormatHour(numberPHASE);
-		menu_FormatHour(numberPHASE + 1);
+		menu_FormatHour0(numberPHASE);
+		menu_FormatHour0(numberPHASE + 1);
 
 		/**Capturing the option*/
-		fifoByte_UART0(&data);
+		fifoByte_UART(UART0, &data);
 
 		if(('S' == data) || ('s' == data))
 		{
@@ -761,7 +782,7 @@ void taskFORMAT_ShowFormat(void *arg)
 		printTimeLCD(realTime);
 #endif
 		/**Print in the UART for phases*/
-		menu_SetDate(numberPHASE + 2);
+		menu_SetDate0(numberPHASE + 2);
 
 		xSemaphoreGive(g_semaphore_Format);
 	}
@@ -781,8 +802,8 @@ void taskREADHOUR_ReadTime(void *arg)
 #if 0
 		printHourUART(getTime());
 #endif
-		menu_ReadHour(numberPHASE);
-		fifoByte_UART0(&data);
+		menu_ReadHour0(numberPHASE);
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_ReadHour);
 	}
 }
@@ -801,12 +822,29 @@ void taskREADDATE_ReadCalendar(void *arg)
 #if 0
 		printDateUART(getTime());
 #endif
-		menu_ReadDate(numberPHASE);
-		fifoByte_UART0(&data);
+		menu_ReadDate0(numberPHASE);
+		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_ReadDate);
 	}
 }
+void taskTERMINAL_2(void *arg)
+{
+	uint8_t data;
+	for(;;)
+	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsTerminal,
+				(EVENT_TERMINAL), pdTRUE,
+				pdTRUE, portMAX_DELAY);
 
+		while(ASCII_ESC != data)
+		{
+			fifoByte_UART(UART0, &data);
+		    UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
+		}
+		xSemaphoreGive(g_semaphore_Terminal2);
+	}
+}
 void taskECO_TransmitECO(void *arg)
 {
 	const uint8_t numberPHASE = 1;
@@ -821,14 +859,14 @@ void taskECO_TransmitECO(void *arg)
 
 		while(ASCII_CR != data)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 		    UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
 			LCDNokia_sendChar(data);
 		}
 
 		/**Print in the UART for phases*/
-		menu_EcoLCD(numberPHASE);
-		menu_EcoLCD(numberPHASE + 1);
+		menu_EcoLCD0(numberPHASE);
+		menu_EcoLCD0(numberPHASE + 1);
 		LCDNokia_clear();
 		xSemaphoreGive(g_semaphore_Eco);
 	}
@@ -859,7 +897,7 @@ void taskMENU_Menu(void *arg)
 #endif
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
-			fifoByte_UART0(&data);
+			fifoByte_UART(UART0, &data);
 			string[counter] = data;
 
 			if(0 == counter)
@@ -896,7 +934,7 @@ void taskMENU_Read(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_ReadI2C(phase);
+		menu_ReadI2C0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsReadI2C, EVENT_RI2C_READ);
@@ -922,7 +960,7 @@ void taskMENU_Write(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_WriteI2C(phase);
+		menu_WriteI2C0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsSetHour, EVENT_WI2C_WRITE);
@@ -948,7 +986,7 @@ void taskMENU_SetHour(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_SetHour(phase);
+		menu_SetHour0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsSetHour, EVENT_HOUR_SET);
@@ -974,7 +1012,7 @@ void taskMENU_SetDate(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_SetDate(phase);
+		menu_SetDate0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsSetDate, EVENT_DATE_SET);
@@ -1000,7 +1038,7 @@ void taskMENU_Format(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_FormatHour(phase);
+		menu_FormatHour0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsFormat, EVENT_FORMAT_SET);
@@ -1026,7 +1064,7 @@ void taskMENU_ReadHour(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_ReadHour(phase);
+		menu_ReadHour0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsReadHour, EVENT_HOUR_READ);
@@ -1052,7 +1090,7 @@ void taskMENU_ReadDate(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_ReadDate(phase);
+		menu_ReadDate0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsReadDate, EVENT_DATE_READ);
@@ -1064,7 +1102,6 @@ void taskMENU_ReadDate(void *arg)
 
 void taskMENU_Terminal2(void *arg)
 {
-	uint8_t phase = 0;
 	Time_Type time;
 	for(;;)
 	{
@@ -1102,7 +1139,7 @@ void taskMENU_Eco(void *arg)
 		printTimeLCD(time);
 #endif
 		/**Print in the UART for phases*/
-		menu_EcoLCD(phase);
+		menu_EcoLCD0(phase);
 
 		/**Set the flag event to jump to the next task*/
 		xEventGroupSetBits(g_eventsEco, EVENT_ECO_TRANS);
