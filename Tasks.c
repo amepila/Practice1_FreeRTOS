@@ -56,7 +56,8 @@
 #define EVENT_HOUR_READ			(1<<0)
 #define EVENT_DATE_READ			(1<<0)
 #define EVENT_ECO_TRANS			(1<<0)
-#define EVENT_TERMINAL			(1<<0)
+#define EVENT_TERMINAL1			(1<<0)
+#define EVENT_TERMINAL2			(1<<1)
 
 #define LENGHT_UART				(2)
 #define TRUE					(1)
@@ -227,16 +228,8 @@ status_t init_UART0(void)
 status_t init_UART1(void)
 {
 	CLOCK_EnableClock(kCLOCK_PortC);
-	CLOCK_EnableClock(kCLOCK_Uart1);
-
-	port_pin_config_t config_uart1 =
-	{ 		kPORT_PullDisable, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
-	        kPORT_OpenDrainDisable, kPORT_LowDriveStrength, kPORT_MuxAlt3,
-	        kPORT_UnlockRegister
-	};
-
-	PORT_SetPinConfig(PORTC, 4, &config_uart1);	//Tx
-	PORT_SetPinConfig(PORTC, 3, &config_uart1);	//Rx
+	PORT_SetPinMux(PORTC, 4, kPORT_MuxAlt3);
+	PORT_SetPinMux(PORTC, 3, kPORT_MuxAlt3);
 
     uart_config_t uart1Config;
 
@@ -311,14 +304,13 @@ void taskINIT(void *arg)
 	g_eventsTerminal = xEventGroupCreate();
 	g_eventsEco = xEventGroupCreate();
 
-
 /**********************************TASKS*****************************************/
 	/******************************MENU TASKS****************************/
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#if 0
 	xTaskCreate(taskMENU_Read, "Read_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
 	xTaskCreate(taskMENU_Write, "Write_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
@@ -331,17 +323,20 @@ void taskINIT(void *arg)
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadDate, "ReadDate_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#endif
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+#if 0
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 #endif
+
+#if 0
 	/******************************READ I2C TASKS****************************/
 
 	xTaskCreate(taskREADI2C_Read, "ReadI2C_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
+
 	/******************************WRITE I2C TASKS****************************/
 
 	xTaskCreate(taskWRITEI2C_AddressWrite, "WriteI2C_Write",
@@ -371,11 +366,14 @@ void taskINIT(void *arg)
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+#endif
 
-	/******************************READ DATE TASKS****************************/
+	/******************************TERMINAL TASKS****************************/
+	xTaskCreate(taskTERMINAL_1, "Terminal_1",
+			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskTERMINAL_2, "Terminal_2",
 			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+#if 0
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
@@ -827,6 +825,32 @@ void taskREADDATE_ReadCalendar(void *arg)
 		xSemaphoreGive(g_semaphore_ReadDate);
 	}
 }
+void taskTERMINAL_1(void *arg)
+{
+	uint8_t data;
+	for(;;)
+	{
+		/**Wait the event flag to continue the task*/
+		xEventGroupWaitBits(g_eventsTerminal,
+				(EVENT_TERMINAL1), pdTRUE,
+				pdTRUE, portMAX_DELAY);
+
+		while(ASCII_ESC != data)
+		{
+			fifoByte_UART(UART0, &data);
+			if(ASCII_CR != data)
+			{
+			    UART_WriteBlocking(UART1, &data, sizeof(uint8_t));
+			}
+			else
+			{
+				xEventGroupSetBits(g_eventsTerminal, EVENT_TERMINAL2);
+			}
+		}
+		xSemaphoreGive(g_semaphore_Terminal2);
+	}
+}
+
 void taskTERMINAL_2(void *arg)
 {
 	uint8_t data;
@@ -834,17 +858,24 @@ void taskTERMINAL_2(void *arg)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsTerminal,
-				(EVENT_TERMINAL), pdTRUE,
+				(EVENT_TERMINAL2), pdTRUE,
 				pdTRUE, portMAX_DELAY);
 
 		while(ASCII_ESC != data)
 		{
-			fifoByte_UART(UART0, &data);
-		    UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
+			fifoByte_UART(UART1, &data);
+			if(ASCII_CR != data)
+			{
+			    UART_WriteBlocking(UART0, &data, sizeof(uint8_t));
+			}
+			else
+			{
+				xEventGroupSetBits(g_eventsTerminal, EVENT_TERMINAL1);
+			}
 		}
-		xSemaphoreGive(g_semaphore_Terminal2);
 	}
 }
+
 void taskECO_TransmitECO(void *arg)
 {
 	const uint8_t numberPHASE = 1;
@@ -1116,7 +1147,7 @@ void taskMENU_Terminal2(void *arg)
 #endif
 
 		/**Set the flag event to jump to the next task*/
-		xEventGroupSetBits(g_eventsTerminal, EVENT_TERMINAL);
+		xEventGroupSetBits(g_eventsTerminal, EVENT_TERMINAL1);
 
 		xSemaphoreTake(g_semaphore_Terminal2, portMAX_DELAY);
 		xSemaphoreGive(g_semaphore_Init);
