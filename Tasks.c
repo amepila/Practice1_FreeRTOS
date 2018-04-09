@@ -65,6 +65,7 @@
 #define QUEUE_ELEMENTS			(1)
 #define LENGTH_DATA_MEMORY		(20)
 #define ASCII_NUMBER			(49)
+#define TASKS_STACK_SIZE		(110)
 
 SemaphoreHandle_t g_semaphore_Init;
 SemaphoreHandle_t g_semaphore_ReadI2C;
@@ -307,77 +308,73 @@ void taskINIT(void *arg)
 /**********************************TASKS*****************************************/
 	/******************************MENU TASKS****************************/
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#if 0
+			(2*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Read, "Read_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Write, "Write_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetDate, "SetDate_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Format, "Format_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadHour, "ReadHour_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadDate, "ReadDate_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
-#if 0
 	/******************************READ I2C TASKS****************************/
 
 	xTaskCreate(taskREADI2C_Read, "ReadI2C_Read",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 
 	/******************************WRITE I2C TASKS****************************/
 
 	xTaskCreate(taskWRITEI2C_Write, "WriteI2C_Write",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET HOUR TASK****************************/
 
 	xTaskCreate(taskSETHOUR_SetTime, "SetHour_Set",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET DATE TASKS****************************/
 
 	xTaskCreate(taskSETDATE_SetCalendar, "SetDate_Set",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************FORMAT TASK****************************/
 
 	xTaskCreate(taskFORMAT_ShowFormat, "Format_Show",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ HOUR TASKS****************************/
 
 	xTaskCreate(taskREADHOUR_ReadTime, "ReadHour_Read",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ DATE TASKS****************************/
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************TERMINAL TASKS****************************/
+
 	xTaskCreate(taskTERMINAL_1, "Terminal_1",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskTERMINAL_2, "Terminal_2",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
-#endif
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+
 	/******************************ECO TASKS****************************/
 
 	xTaskCreate(taskECO_TransmitECO, "Eco_Trans",
-			(4*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	xSemaphoreGive(g_semaphore_Init);
 	for(;;)
