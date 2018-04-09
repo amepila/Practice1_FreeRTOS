@@ -9,8 +9,8 @@
 #include "fsl_uart.h"
 #include "fsl_dspi.h"
 #include "PeripheralFunctions.h"
-#include "E2PROM.h"
-#include "RTC.h"
+#include "BCDdecoder.h"
+#include "I2C.h"
 
 /**ASCII table such as reference**/
 
@@ -131,13 +131,12 @@ void setTimeLCD(Time_Type time)
 	{
 		setRTC_day((uint8_t)time.date.day);
 		setRTC_month((uint8_t)time.date.month);
-		setRTC_year((uint8_t)time.date.year);
 		/**Save the info into Clock*/
 		Clock = time;
 		time.modifyDate = 0;
 	}
 }
-#if 0
+
 Time_Type getTime(void)
 {
 
@@ -158,18 +157,11 @@ Time_Type getTime(void)
 	uint32_t unDay;
 	/**Converts from BCD*/
 	decHour = BCDHDec(readRTC_hour());
-	unHour = BCDUni(readRTC_hour());
-	decMin = BCDDec(readRTC_min());
-	unMin = BCDUni(readRTC_min());
-	decSec = BCDDec(readRTC_sec());
-	unSec = BCDUni(readRTC_sec());
-	/**Converts from BCD*/
-	decYear = BCDYearDec(readRTC_year());
-	unYear = BCDUni(readRTC_year());
-	decMonth = BCDMonthDec(readRTC_month());
-	unMonth = BCDUni(readRTC_month());
-	decDay = BCDDayDec(readRTC_day());
-	unDay = BCDUni(readRTC_day());
+	unHour = BCDunits(readRTC_hour());
+	decMin = BCDtens(readRTC_min());
+	unMin = BCDunits(readRTC_min());
+	decSec = BCDtens(readRTC_sec());
+	unSec = BCDunits(readRTC_sec());
 
 	/**The second digit is multiplied by 10*/
 	decHour *= 10;
@@ -178,6 +170,7 @@ Time_Type getTime(void)
 	decYear *= 10;
 	decMonth *= 10;
 	decDay *= 10;
+
 	/**The pair of digits are summed and saved into realTime*/
 	realTime.hour.hour = decHour + unHour;
 	realTime.hour.minutes = decMin + unMin;
@@ -185,7 +178,6 @@ Time_Type getTime(void)
 	realTime.hour.format = Clock.hour.format;
 	realTime.hour.period = Clock.hour.period;
 
-	realTime.date.year = decYear + unYear;
 	realTime.date.month = decMonth + unMonth;
 	realTime.date.day = decDay + unDay;
 
@@ -203,17 +195,17 @@ void printTimeLCD(Time_Type time)
 		LCDNokia_gotoXY(15,2);
 		delay(6500);
 		LCDNokia_printValue(BCDHDec(readRTC_hour()));
-		LCDNokia_printValue(BCDUni(readRTC_hour()));
+		LCDNokia_printValue(BCDunits(readRTC_hour()));
 		LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 		LCDNokia_gotoXY(35,2);
-		LCDNokia_printValue(BCDDec(readRTC_min()));
-		LCDNokia_printValue(BCDUni(readRTC_min()));
+		LCDNokia_printValue(BCDtens(readRTC_min()));
+		LCDNokia_printValue(BCDunits(readRTC_min()));
 		LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 		LCDNokia_gotoXY(55,2);
-		LCDNokia_printValue(BCDDec(readRTC_sec()));
-		LCDNokia_printValue(BCDUni(readRTC_sec()));
+		LCDNokia_printValue(BCDtens(readRTC_sec()));
+		LCDNokia_printValue(BCDunits(readRTC_sec()));
 		/**Clear the space of AM PM*/
 		LCDNokia_gotoXY(35,3);
 		LCDNokia_sendChar(' ');
@@ -230,17 +222,17 @@ void printTimeLCD(Time_Type time)
 
 			LCDNokia_gotoXY(15,2);
 			LCDNokia_printValue(BCDHDec(tmpHour));
-			LCDNokia_printValue(BCDUni(tmpHour));
+			LCDNokia_printValue(BCDunits(tmpHour));
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(35,2);
-			LCDNokia_printValue(BCDDec(readRTC_min()));
-			LCDNokia_printValue(BCDUni(readRTC_min()));
+			LCDNokia_printValue(BCDtens(readRTC_min()));
+			LCDNokia_printValue(BCDunits(readRTC_min()));
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(55,2);
-			LCDNokia_printValue(BCDDec(readRTC_sec()));
-			LCDNokia_printValue(BCDUni(readRTC_sec()));
+			LCDNokia_printValue(BCDtens(readRTC_sec()));
+			LCDNokia_printValue(BCDunits(readRTC_sec()));
 
 			LCDNokia_gotoXY(35,3);
 			LCDNokia_sendChar('P');
@@ -255,13 +247,13 @@ void printTimeLCD(Time_Type time)
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(35,2);
-			LCDNokia_printValue(BCDDec(readRTC_min()));
-			LCDNokia_printValue(BCDUni(readRTC_min()));
+			LCDNokia_printValue(BCDtens(readRTC_min()));
+			LCDNokia_printValue(BCDunits(readRTC_min()));
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(55,2);
-			LCDNokia_printValue(BCDDec(readRTC_sec()));
-			LCDNokia_printValue(BCDUni(readRTC_sec()));
+			LCDNokia_printValue(BCDtens(readRTC_sec()));
+			LCDNokia_printValue(BCDunits(readRTC_sec()));
 
 			LCDNokia_gotoXY(35,3);
 			LCDNokia_sendChar('P');
@@ -272,17 +264,17 @@ void printTimeLCD(Time_Type time)
 		{
 			LCDNokia_gotoXY(15,2);
 			LCDNokia_printValue(BCDHDec(readRTC_hour()));
-			LCDNokia_printValue(BCDUni(readRTC_hour()));
+			LCDNokia_printValue(BCDunits(readRTC_hour()));
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(35,2);
-			LCDNokia_printValue(BCDDec(readRTC_min()));
-			LCDNokia_printValue(BCDUni(readRTC_min()));
+			LCDNokia_printValue(BCDtens(readRTC_min()));
+			LCDNokia_printValue(BCDunits(readRTC_min()));
 			LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 
 			LCDNokia_gotoXY(55,2);
-			LCDNokia_printValue(BCDDec(readRTC_sec()));
-			LCDNokia_printValue(BCDUni(readRTC_sec()));
+			LCDNokia_printValue(BCDtens(readRTC_sec()));
+			LCDNokia_printValue(BCDunits(readRTC_sec()));
 
 			LCDNokia_gotoXY(35,3);
 			LCDNokia_sendChar('A');
@@ -292,20 +284,19 @@ void printTimeLCD(Time_Type time)
 
 	/*******************DATE***************************/
 	LCDNokia_gotoXY(15,4);
-	LCDNokia_printValue(BCDDayDec(readRTC_day()));
-	LCDNokia_printValue(BCDUni(readRTC_day()));
+	LCDNokia_printValue(BCDtens(readRTC_day()));
+	LCDNokia_printValue(BCDunits(readRTC_day()));
 	LCDNokia_sendChar(ASCII_DIAG);
 
 	LCDNokia_gotoXY(35,4);
-	LCDNokia_printValue(BCDMonthDec(readRTC_month()));
-	LCDNokia_printValue(BCDUni(readRTC_month()));
+	LCDNokia_printValue(BCDtens(readRTC_month()));
+	LCDNokia_printValue(BCDunits(readRTC_month()));
 	LCDNokia_sendChar(ASCII_DIAG);
 
 	LCDNokia_gotoXY(55,4);
-	LCDNokia_printValue(BCDYearDec(readRTC_year()));
-	LCDNokia_printValue(BCDUni(readRTC_year()));
+	//year
 }
-#endif
+
 void printHourUART(Time_Type time)
 {
 	uint32_t partDecHour;

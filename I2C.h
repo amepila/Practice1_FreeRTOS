@@ -1,20 +1,32 @@
 /*
- * RTC.h
+ * I2C.h
  *
- *  Created on: Mar 15, 2018
+ *  Created on: Mar 26, 2018
  *      Author: eric_
  */
 
-#ifndef RTC_H_
-#define RTC_H_
+#ifndef I2C_H_
+#define I2C_H_
+#include <stdint.h>
 
 
-void I2Cinit();
-
+/*\brief funcion para escribir en memoria recibe una direccion de 16 bits y el dato que se quiere escribir, por medio del protocolo estandar de I2C
+ * \param[add] direccion a la que se quiere escribir
+ *\param[data] datos a escribir
+ * */
+void writeMemory(uint16_t add,uint8_t data);
+/*\brief funcion para leer la memoria recibe una direccion de 16 bits para obtener el dato por medio del protocolo estandar de I2C
+ * \param[add] direccion a la que se quiere leer
+ * */
+uint8_t readMemory(uint16_t add);
 /*\brief Esta funcion accesa a la direccion de memoria de segundos y regresa el dato
  * \return entero en formato BCD que representa segundos
  * */
 uint8_t readRTC_sec();
+
+void I2Cinit();
+
+
 
 /*\brief Esta funcion accesa a la direccion de memoria de minutos y la regresa el dato
  * \return entero en formato BCD que representa minutos
@@ -65,11 +77,7 @@ void setRTC_day(uint8_t day);
  *
  * */
 void setRTC_month(uint8_t month);
-/*\brief Esta funcion recibe un valor entero que se convierte en BCD para ser guardado en la parte de año del RTC.
- * \param[year] numero entero para segundos.
- *
- * */
-void setRTC_year(uint16_t year);
 
+void i2crestart(uint8_t sec,uint8_t min, uint8_t hour, uint8_t day, uint8_t month);
 
-#endif /* RTC_H_ */
+#endif /* I2C_H_ */
