@@ -319,6 +319,7 @@ void taskINIT(void *arg)
 /**********************************QUEUES*****************************************/
 
 /**********************************EVENTS*****************************************/
+#if 1
 	g_event_Init = xEventGroupCreate();
 	g_event_ReadI2C = xEventGroupCreate();
 	g_event_WriteI2C = xEventGroupCreate();
@@ -328,7 +329,7 @@ void taskINIT(void *arg)
 	g_event_ReadHour = xEventGroupCreate();;
 	g_event_ReadDate = xEventGroupCreate();
 	g_event_Eco = xEventGroupCreate();
-
+#endif
 	g_button_events = xEventGroupCreate();
 	g_eventsMenus = xEventGroupCreate();
 	g_eventsReadI2C = xEventGroupCreate();
@@ -957,11 +958,7 @@ void taskMENU_Menu(void *arg)
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
 		menu_Main0();
-
-		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		setTimeLCD(*rtcTime);
-		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
-
 #if 0
 		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		printTimeLCD(*rtcTime);

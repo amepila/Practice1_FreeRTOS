@@ -529,10 +529,6 @@ void printDateUART(Time_Type time)
     UART_WriteBlocking(UART0, (uint8_t*)ASCII_DIAG, sizeof(uint8_t));
     UART_WriteBlocking(UART0, &date[2], sizeof(uint8_t));
     UART_WriteBlocking(UART0, &date[3], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, (uint8_t*)ASCII_DIAG, sizeof(uint8_t));
-    UART_WriteBlocking(UART0, &date[4], sizeof(uint8_t));
-    UART_WriteBlocking(UART0, &date[5], sizeof(uint8_t));
-
 }
 
 

@@ -156,11 +156,6 @@ uint8_t readRTC_sec()
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
 	while (!g_MasterCompletionFlag)
 	{
-		for(uint32_t i = 480000000;i==0;i--)
-		{
-		}
-		g_MasterCompletionFlag=true;
-
 	}
 	g_MasterCompletionFlag = false;
 	I2Cwritedelay();
@@ -187,12 +182,8 @@ uint8_t readRTC_min()
 	masterXfer.flags = kI2C_TransferDefaultFlag;
 
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
-	while (!g_MasterCompletionFlag){
-		for(uint32_t i = 480000000;i==0;i--)
-		{
-		}
-		g_MasterCompletionFlag=true;
-
+	while (!g_MasterCompletionFlag)
+	{
 	}
 	g_MasterCompletionFlag = false;
 	I2Cwritedelay();
@@ -221,10 +212,7 @@ uint8_t readRTC_hour()
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
 
 	while (!g_MasterCompletionFlag){
-		for(uint32_t i = 480000000;i==0;i--)
-		{
-		}
-		g_MasterCompletionFlag=true;
+
 
 	}
 	g_MasterCompletionFlag = false;
@@ -253,10 +241,6 @@ uint8_t readRTC_day()
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
 
 	while (!g_MasterCompletionFlag){
-		for(uint32_t i = 480000000;i==0;i--)
-		{
-		}
-		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
@@ -285,10 +269,6 @@ uint8_t readRTC_month()
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
 
 	while (!g_MasterCompletionFlag){
-		for(uint32_t i = 480000000;i==0;i--)
-		{
-		}
-		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
