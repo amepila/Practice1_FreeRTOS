@@ -90,7 +90,6 @@ int main(void)
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
 	vTaskStartScheduler();
-
 	for(;;)
     {
 	}

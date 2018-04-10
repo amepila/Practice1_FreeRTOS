@@ -227,9 +227,9 @@ void init_UART0(void)
 void init_UART1(void)
 {
 	CLOCK_EnableClock(kCLOCK_PortC);
-	PORT_SetPinMux(PORTC, 4, kPORT_MuxAlt3);
-	PORT_SetPinMux(PORTC, 3, kPORT_MuxAlt3);
 
+	PORT_SetPinMux(PORTC, 15, kPORT_MuxAlt3);
+	PORT_SetPinMux(PORTC, 14, kPORT_MuxAlt3);
     uart_config_t uart1Config;
 
     UART_GetDefaultConfig(&uart1Config);
@@ -238,8 +238,8 @@ void init_UART1(void)
     uart1Config.enableTx = true;
     uart1Config.baudRate_Bps = 9600U;
 
-    UART_Init(UART1,&uart1Config,CLOCK_GetFreq(kCLOCK_CoreSysClk));
-    UART_TransferCreateHandle(UART1, &g_uart1Handle,
+    UART_Init(UART4,&uart1Config,CLOCK_GetFreq(kCLOCK_BusClk));
+    UART_TransferCreateHandle(UART4, &g_uart1Handle,
     		uart1_transfer_callback, NULL);
 }
 
@@ -543,10 +543,9 @@ void taskSETHOUR_SetTime(void *arg)
 		xEventGroupWaitBits(g_eventsSetHour,
 				(EVENT_HOUR_SET), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 1
+
 		/**Get the time into variable only once*/
 		time = getTime();
-#endif
 
 		if(FORMAT_24H == time.hour.format)
 		{
@@ -614,9 +613,9 @@ void taskSETHOUR_SetTime(void *arg)
 		realTime.hour.period = time.hour.period;
 		realTime.modifyDate = pdFALSE;
 		realTime.modifyTime = pdTRUE;
-#if 0
+
 		setTimeLCD(realTime);
-#endif
+
 		/**Update the time structure*/
 		rtcTime->hour = realTime.hour;
 
@@ -639,7 +638,6 @@ void taskSETDATE_SetCalendar(void *arg)
 	Time_Type time;
 	uint8_t day[numberMAX_STRING];
 	uint8_t month[numberMAX_STRING];
-	uint8_t year[numberMAX_STRING + 2];
 	Time_Type realTime;
 
 	for(;;)
@@ -648,10 +646,9 @@ void taskSETDATE_SetCalendar(void *arg)
 		xEventGroupWaitBits(g_eventsSetDate,
 				(EVENT_DATE_SET), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 0
+
 		/**Get the time into variable only once*/
 		time = getTime();
-#endif
 
 #if 0
 		/**Wait the event button to continue the task*/
@@ -686,32 +683,16 @@ void taskSETDATE_SetCalendar(void *arg)
 			    UART_WriteBlocking(UART0, &month[counter],
 			    		sizeof(uint8_t));
 			}
-			else
-			{
-				UART_WriteBlocking(UART0, &char_diagonal,
-						sizeof(uint8_t));
-			}
 		}
-
-		/**Capturing the year*/
-		for(counter = 0; counter < (numberMAX_STRING + 2); counter++)
-		{
-			fifoByte_UART(UART0, &data);
-			year[counter] = data;
-			if(ASCII_CR != data)
-			{
-			    UART_WriteBlocking(UART0, &year[counter],
-			    		sizeof(uint8_t));
-			}
-		}
+		realTime.hour.format = time.hour.format;
+		realTime.hour.period = time.hour.period;
 		realTime.date.day = Convert_numberASCIItoDATA(day);
 		realTime.date.month = Convert_numberASCIItoDATA(month);
-		realTime.date.year = Convert_numberASCIItoDATA(year);
 		realTime.modifyDate = pdTRUE;
 		realTime.modifyTime = pdFALSE;
-#if 0
+
 		setTimeLCD(realTime);
-#endif
+
 		/**Update the date structure*/
 		rtcTime->date = realTime.date;
 
@@ -738,10 +719,9 @@ void taskFORMAT_ShowFormat(void *arg)
 		xEventGroupWaitBits(g_eventsFormat,
 				(EVENT_FORMAT_SET), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 0
+
 		/**Get the time into variable only once*/
 		time = getTime();
-#endif
 
 		realTime = time;
 		if(FORMAT_24H == time.hour.format)
@@ -788,8 +768,9 @@ void taskFORMAT_ShowFormat(void *arg)
 			realTime.hour.format = time.hour.format;
 		}
 		realTime.modifyTime = pdTRUE;
-#if 0
+
 		setTimeLCD(realTime);
+#if 0
 		printTimeLCD(realTime);
 #endif
 		/**Print in the UART for phases*/
@@ -804,15 +785,17 @@ void taskREADHOUR_ReadTime(void *arg)
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
+	Time_Type time;
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsReadHour,
 				(EVENT_HOUR_READ), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 0
-		printHourUART(getTime());
-#endif
+
+		time = getTime();
+		printHourUART(time);
+
 		menu_ReadHour0(numberPHASE);
 		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_ReadHour);
@@ -824,15 +807,17 @@ void taskREADDATE_ReadCalendar(void *arg)
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
+	Time_Type time;
 	for(;;)
 	{
 		/**Wait the event flag to continue the task*/
 		xEventGroupWaitBits(g_eventsReadDate,
 				(EVENT_DATE_READ), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 0
-		printDateUART(getTime());
-#endif
+
+		time = getTime();
+		printDateUART(time);
+
 		menu_ReadDate0(numberPHASE);
 		fifoByte_UART(UART0, &data);
 		xSemaphoreGive(g_semaphore_ReadDate);
@@ -928,16 +913,22 @@ void taskMENU_Menu(void *arg)
 	uint8_t string[numberMAX_STRING];
 	uint32_t bitSet;
 	uint32_t counter;
+	uint8_t lockSetTime = pdFALSE;
 
 	for(;;)
 	{
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
 		menu_Main0();
-		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
-		/**Send the struct to RTC**/
-		setTimeLCD(*rtcTime);
-	xSemaphoreGive(g_MUTEXTEST);
+		if(pdFALSE == lockSetTime)
+		{
+			xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
+			/**Send the struct to RTC**/
+			setTimeLCD(*rtcTime);
+			xSemaphoreGive(g_MUTEXTEST);
+			lockSetTime = pdTRUE;
+		}
+
 #if 0
 		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		printTimeLCD(*rtcTime);

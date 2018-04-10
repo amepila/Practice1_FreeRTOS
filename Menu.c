@@ -94,42 +94,42 @@ uint8_t menu_Main1(void)
 	 * is coded with terminal code*/
 
 	/*VT100 command for clearing the screen*/
-	UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+	UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 
 	/** VT100 command for positioning the cursor in x and y position*/
 
-    UART_WriteBlocking(UART1, line10, sizeof(line10));
-    UART_WriteBlocking(UART1, string1, sizeof(string1));
+    UART_WriteBlocking(UART4, line10, sizeof(line10));
+    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
-    UART_WriteBlocking(UART1, line11, sizeof(line11));
-    UART_WriteBlocking(UART1, string2, sizeof(string2));
+    UART_WriteBlocking(UART4, line11, sizeof(line11));
+    UART_WriteBlocking(UART4, string2, sizeof(string2));
 
-    UART_WriteBlocking(UART1, line12, sizeof(line12));
-    UART_WriteBlocking(UART1, string3, sizeof(string3));
+    UART_WriteBlocking(UART4, line12, sizeof(line12));
+    UART_WriteBlocking(UART4, string3, sizeof(string3));
 
-    UART_WriteBlocking(UART1, line13, sizeof(line13));
-    UART_WriteBlocking(UART1, string4, sizeof(string4));
+    UART_WriteBlocking(UART4, line13, sizeof(line13));
+    UART_WriteBlocking(UART4, string4, sizeof(string4));
 
-    UART_WriteBlocking(UART1, line14, sizeof(line14));
-    UART_WriteBlocking(UART1, string5, sizeof(string5));
+    UART_WriteBlocking(UART4, line14, sizeof(line14));
+    UART_WriteBlocking(UART4, string5, sizeof(string5));
 
-    UART_WriteBlocking(UART1, line15, sizeof(line15));
-    UART_WriteBlocking(UART1, string6, sizeof(string6));
+    UART_WriteBlocking(UART4, line15, sizeof(line15));
+    UART_WriteBlocking(UART4, string6, sizeof(string6));
 
-    UART_WriteBlocking(UART1, line16, sizeof(line16));
-    UART_WriteBlocking(UART1, string7, sizeof(string7));
+    UART_WriteBlocking(UART4, line16, sizeof(line16));
+    UART_WriteBlocking(UART4, string7, sizeof(string7));
 
-    UART_WriteBlocking(UART1, line17, sizeof(line17));
-    UART_WriteBlocking(UART1, string8, sizeof(string8));
+    UART_WriteBlocking(UART4, line17, sizeof(line17));
+    UART_WriteBlocking(UART4, string8, sizeof(string8));
 
-    UART_WriteBlocking(UART1, line18, sizeof(line18));
-    UART_WriteBlocking(UART1, string9, sizeof(string9));
+    UART_WriteBlocking(UART4, line18, sizeof(line18));
+    UART_WriteBlocking(UART4, string9, sizeof(string9));
 
-    UART_WriteBlocking(UART1, line19, sizeof(line19));
-    UART_WriteBlocking(UART1, string10, sizeof(string10));
+    UART_WriteBlocking(UART4, line19, sizeof(line19));
+    UART_WriteBlocking(UART4, string10, sizeof(string10));
 
 	/** VT100 command for positioning the cursor in x and y position*/
-    UART_WriteBlocking(UART1, line20, sizeof(line20));
+    UART_WriteBlocking(UART4, line20, sizeof(line20));
 
 	return (1);
 }
