@@ -224,10 +224,10 @@ uint8_t menu_ReadI2C1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -239,8 +239,8 @@ uint8_t menu_ReadI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
 
 			flagContinue.flag2 = 1;
 		}
@@ -251,9 +251,9 @@ uint8_t menu_ReadI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag3)
 		{
-		    UART_WriteBlocking(UART1, line12, sizeof(line12));
-		    UART_WriteBlocking(UART1, string3, sizeof(string3));
-		    UART_WriteBlocking(UART1, line15, sizeof(line15));
+		    UART_WriteBlocking(UART4, line12, sizeof(line12));
+		    UART_WriteBlocking(UART4, string3, sizeof(string3));
+		    UART_WriteBlocking(UART4, line15, sizeof(line15));
 
 			flagContinue.flag3 = 1;
 		}
@@ -265,8 +265,8 @@ uint8_t menu_ReadI2C1(uint8_t phase)
 	{
 		if(0  == flagContinue.flag4)
 		{
-		    UART_WriteBlocking(UART1, line16, sizeof(line16));
-		    UART_WriteBlocking(UART1, string4, sizeof(string4));
+		    UART_WriteBlocking(UART4, line16, sizeof(line16));
+		    UART_WriteBlocking(UART4, string4, sizeof(string4));
 
 			flagContinue.flag4 = 1;
 		}
@@ -358,10 +358,10 @@ uint8_t menu_WriteI2C1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -372,9 +372,9 @@ uint8_t menu_WriteI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
-		    UART_WriteBlocking(UART1, line12, sizeof(line12));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line12, sizeof(line12));
 
 			flagContinue.flag2 = 1;
 		}
@@ -384,10 +384,10 @@ uint8_t menu_WriteI2C1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag3)
 		{
-		    UART_WriteBlocking(UART1, line13, sizeof(line13));
-		    UART_WriteBlocking(UART1, string3, sizeof(string3));
+		    UART_WriteBlocking(UART4, line13, sizeof(line13));
+		    UART_WriteBlocking(UART4, string3, sizeof(string3));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line14, sizeof(line14));
+		    UART_WriteBlocking(UART4, line14, sizeof(line14));
 
 			flagContinue.flag3 = 1;
 		}
@@ -467,11 +467,11 @@ uint8_t menu_SetHour1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
 			flagContinue.flag1 = 1;
 		}
 		return 0;
@@ -481,11 +481,11 @@ uint8_t menu_SetHour1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line12, sizeof(line12));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line12, sizeof(line12));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
 
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line20, sizeof(line20));
+		    UART_WriteBlocking(UART4, line20, sizeof(line20));
 
 			flagContinue.flag2 = 1;
 		}
@@ -563,10 +563,10 @@ uint8_t menu_SetDate1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -577,10 +577,10 @@ uint8_t menu_SetDate1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line20, sizeof(line20));
+		    UART_WriteBlocking(UART4, line20, sizeof(line20));
 
 			flagContinue.flag2 = 1;
 		}
@@ -684,10 +684,10 @@ uint8_t menu_FormatHour1(uint8_t phase)
 		{
 			flagContinue.flag4 = 0;
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -698,8 +698,8 @@ uint8_t menu_FormatHour1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
 
 			flagContinue.flag2 = 1;
 		}
@@ -710,7 +710,7 @@ uint8_t menu_FormatHour1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag3)
 		{
-		    UART_WriteBlocking(UART1, string3, sizeof(string3));
+		    UART_WriteBlocking(UART4, string3, sizeof(string3));
 
 			flagContinue.flag3 = 1;
 		}
@@ -721,8 +721,8 @@ uint8_t menu_FormatHour1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag4)
 		{
-		    UART_WriteBlocking(UART1, line12, sizeof(line12));
-		    UART_WriteBlocking(UART1, string4, sizeof(string4));
+		    UART_WriteBlocking(UART4, line12, sizeof(line12));
+		    UART_WriteBlocking(UART4, string4, sizeof(string4));
 
 			/** VT100 command for positioning the cursor in x and y position*/
 		    UART_WriteBlocking(UART1, line20, sizeof(line20));
@@ -782,10 +782,10 @@ uint8_t menu_ReadHour1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -844,10 +844,10 @@ uint8_t menu_ReadDate1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
 
 			flagContinue.flag1 = 1;
 		}
@@ -956,11 +956,11 @@ uint8_t menu_EcoLCD1(uint8_t phase)
 		if(0 == flagContinue.flag1)
 		{
 			/*VT100 command for clearing the screen*/
-		    UART_WriteBlocking(UART1, clearScreen, sizeof(clearScreen));
+		    UART_WriteBlocking(UART4, clearScreen, sizeof(clearScreen));
 			/** VT100 command for positioning the cursor in x and y position*/
-		    UART_WriteBlocking(UART1, line10, sizeof(line10));
-		    UART_WriteBlocking(UART1, string1, sizeof(string1));
-		    UART_WriteBlocking(UART1, line11, sizeof(line11));
+		    UART_WriteBlocking(UART4, line10, sizeof(line10));
+		    UART_WriteBlocking(UART4, string1, sizeof(string1));
+		    UART_WriteBlocking(UART4, line11, sizeof(line11));
 
 			flagContinue.flag1 = 1;
 		}
@@ -971,8 +971,8 @@ uint8_t menu_EcoLCD1(uint8_t phase)
 	{
 		if(0 == flagContinue.flag2)
 		{
-		    UART_WriteBlocking(UART1, line13, sizeof(line13));
-		    UART_WriteBlocking(UART1, string2, sizeof(string2));
+		    UART_WriteBlocking(UART4, line13, sizeof(line13));
+		    UART_WriteBlocking(UART4, string2, sizeof(string2));
 
 			flagContinue.flag2 = 1;
 		}

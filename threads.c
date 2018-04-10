@@ -58,6 +58,23 @@
 #define EVENT_TERMINAL1			(1<<0)
 #define EVENT_TERMINAL2			(1<<1)
 
+#define EVENT_RI2C_UART0		(1<<0)
+#define EVENT_RI2C_UART1		(1<<1)
+#define EVENT_WI2C_UART0		(1<<0)
+#define EVENT_WI2C_UART1		(1<<1)
+#define EVENT_HOUR_SET_UART0	(1<<0)
+#define EVENT_HOUR_SET_UART1	(1<<1)
+#define EVENT_DATE_SET_UART0	(1<<0)
+#define EVENT_DATE_SET_UART1	(1<<1)
+#define EVENT_FORMAT_UART0		(1<<0)
+#define EVENT_FORMAT_UART1		(1<<1)
+#define EVENT_HOUR_READ_UART0	(1<<0)
+#define EVENT_HOUR_READ_UART1	(1<<0)
+#define EVENT_DATE_READ_UART0	(1<<0)
+#define EVENT_DATE_READ_UART1	(1<<1)
+#define EVENT_ECO_UART0			(1<<0)
+#define EVENT_ECO_UART1			(1<<1)
+
 #define LENGHT_UART				(2)
 #define TRUE					(1)
 #define FALSE					(0)
@@ -78,6 +95,17 @@ SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_Terminal2;
 SemaphoreHandle_t g_semaphore_Eco;
 SemaphoreHandle_t g_MUTEXTEST;
+
+EventGroupHandle_t g_event_Init;
+EventGroupHandle_t g_event_ReadI2C;
+EventGroupHandle_t g_event_WriteI2C;
+EventGroupHandle_t g_event_SetHour;
+EventGroupHandle_t g_event_SetDate;
+EventGroupHandle_t g_event_Format;
+EventGroupHandle_t g_event_ReadHour;
+EventGroupHandle_t g_event_ReadDate;
+EventGroupHandle_t g_event_ReadDate;
+EventGroupHandle_t g_event_Eco;
 
 QueueHandle_t g_Queue_ReadI2C;
 
@@ -291,6 +319,16 @@ void taskINIT(void *arg)
 /**********************************QUEUES*****************************************/
 
 /**********************************EVENTS*****************************************/
+	g_event_Init = xEventGroupCreate();
+	g_event_ReadI2C = xEventGroupCreate();
+	g_event_WriteI2C = xEventGroupCreate();
+	g_event_SetHour = xEventGroupCreate();
+	g_event_SetDate = xEventGroupCreate();
+	g_event_Format = xEventGroupCreate();
+	g_event_ReadHour = xEventGroupCreate();;
+	g_event_ReadDate = xEventGroupCreate();
+	g_event_Eco = xEventGroupCreate();
+
 	g_button_events = xEventGroupCreate();
 	g_eventsMenus = xEventGroupCreate();
 	g_eventsReadI2C = xEventGroupCreate();
@@ -913,26 +951,21 @@ void taskMENU_Menu(void *arg)
 	uint8_t string[numberMAX_STRING];
 	uint32_t bitSet;
 	uint32_t counter;
-	uint8_t lockSetTime = pdFALSE;
 
 	for(;;)
 	{
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
 		menu_Main0();
-		if(pdFALSE == lockSetTime)
-		{
-			xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
-			/**Send the struct to RTC**/
-			setTimeLCD(*rtcTime);
-			xSemaphoreGive(g_MUTEXTEST);
-			lockSetTime = pdTRUE;
-		}
+
+		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
+		setTimeLCD(*rtcTime);
+		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 
 #if 0
 		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		printTimeLCD(*rtcTime);
-		xSemaphoreGive(g_MUTEXTEST);
+		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 #endif
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{
@@ -956,6 +989,7 @@ void taskMENU_Menu(void *arg)
 		xEventGroupSetBits(g_eventsMenus, bitSet);
 	}
 }
+
 
 void taskMENU_Read(void *arg)
 {
