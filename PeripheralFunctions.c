@@ -11,6 +11,8 @@
 #include "PeripheralFunctions.h"
 #include "BCDdecoder.h"
 #include "I2C.h"
+#include "LCDNokia5110.h"
+
 
 /**ASCII table such as reference**/
 
@@ -150,7 +152,6 @@ Time_Type getTime(void)
 	uint32_t unSec;
 	/**Separate the digits of date*/
 	uint32_t decYear;
-	uint32_t unYear;
 	uint32_t decMonth;
 	uint32_t unMonth;
 	uint32_t decDay;
@@ -194,7 +195,7 @@ void printTimeLCD(Time_Type time)
 		/*Print the hour converted from BCD**/
 		LCDNokia_gotoXY(15,2);
 		delay(6500);
-		LCDNokia_printValue(BCDHDec(readRTC_hour()));
+		LCDNokia_printValue((uint32_t)BCDHDec(readRTC_hour()));
 		LCDNokia_printValue(BCDunits(readRTC_hour()));
 		LCDNokia_sendChar(ASCII_DOUBLEPOINT);
 

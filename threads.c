@@ -25,6 +25,7 @@
 #include "semphr.h"
 #include "queue.h"
 #include "event_groups.h"
+#include "I2C.h"
 
 #define BUTTON_1	(1<<2)
 #define BUTTON_2	(1<<5)
@@ -76,6 +77,7 @@ SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_Terminal2;
 SemaphoreHandle_t g_semaphore_Eco;
+SemaphoreHandle_t g_MUTEXTEST;
 
 QueueHandle_t g_Queue_ReadI2C;
 
@@ -284,6 +286,7 @@ void taskINIT(void *arg)
 	g_semaphore_ReadDate = xSemaphoreCreateBinary();
 	g_semaphore_Terminal2 = xSemaphoreCreateBinary();
 	g_semaphore_Eco = xSemaphoreCreateBinary();
+	g_MUTEXTEST = xSemaphoreCreateMutex();
 
 /**********************************QUEUES*****************************************/
 
@@ -303,61 +306,61 @@ void taskINIT(void *arg)
 /**********************************TASKS*****************************************/
 	/******************************MENU TASKS****************************/
 	xTaskCreate(taskMENU_Menu, "Main_Menu",
-			(2*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Read, "Read_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Write, "Write_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetHour, "SetHour_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_SetDate, "SetDate_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Format, "Format_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadHour, "ReadHour_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_ReadDate, "ReadDate_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Terminal2, "Terminal2_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 	xTaskCreate(taskMENU_Eco, "Eco_Menu",
-			(configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ I2C TASKS****************************/
 
 	xTaskCreate(taskREADI2C_Read, "ReadI2C_Read",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 
 	/******************************WRITE I2C TASKS****************************/
 
 	xTaskCreate(taskWRITEI2C_Write, "WriteI2C_Write",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET HOUR TASK****************************/
 
 	xTaskCreate(taskSETHOUR_SetTime, "SetHour_Set",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************SET DATE TASKS****************************/
 
 	xTaskCreate(taskSETDATE_SetCalendar, "SetDate_Set",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************FORMAT TASK****************************/
 
 	xTaskCreate(taskFORMAT_ShowFormat, "Format_Show",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ HOUR TASKS****************************/
 
 	xTaskCreate(taskREADHOUR_ReadTime, "ReadHour_Read",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************READ DATE TASKS****************************/
 
 	xTaskCreate(taskREADDATE_ReadCalendar, "ReadDate_Read",
-			(TASKS_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
+			(3*configMINIMAL_STACK_SIZE), NULL, configMAX_PRIORITIES-1, NULL);
 
 	/******************************TERMINAL TASKS****************************/
 
@@ -384,6 +387,7 @@ void taskREADI2C_Read(void *arg)
 	const uint8_t numberPHASE = 1;
 
 	uint8_t data;
+	uint8_t dataMemory;
 	uint8_t counter;
 	uint32_t realAddress;
 	uint32_t realLength;
@@ -434,11 +438,10 @@ void taskREADI2C_Read(void *arg)
 		/**Print the data memory*/
 		for(counter = 0; counter < realLength; counter++)
 		{
-#if 0
-			UART_WriteBlocking(UART0, readMemory(realAddress + counter),
+			dataMemory = readMemory(realAddress + counter);
+			UART_WriteBlocking(UART0, &dataMemory,
 			sizeof(uint8_t));
-			E2PROM(6500);
-#endif
+			delay(6500);
 		}
 		/**Print the menu by parts*/
 		menu_ReadI2C0(numberPHASE + 2);
@@ -504,14 +507,12 @@ void taskWRITEI2C_Write(void *arg)
 		menu_WriteI2C0(numberPHASE + 1);
 
 		/**Writing in the E2PROM*/
-#if 0
-		for(counter = realLength; counter != 0; counter--)
+		for(counter = (realLength + 1); counter != 0; counter--)
 		{
-			writeMemory((realAddress + counterAddress), string[counterAddress]);
+			writeMemory((realAddress + counterAddress), stringData[counterAddress]);
 			counterAddress++;
-			E2PROMdelay(65000);
+			delay(65000);
 		}
-#endif
 		counterAddress = 0;
 		/**Print the menu by parts*/
 		menu_WriteI2C0(numberPHASE + 2);
@@ -542,7 +543,7 @@ void taskSETHOUR_SetTime(void *arg)
 		xEventGroupWaitBits(g_eventsSetHour,
 				(EVENT_HOUR_SET), pdTRUE,
 				pdTRUE, portMAX_DELAY);
-#if 0
+#if 1
 		/**Get the time into variable only once*/
 		time = getTime();
 #endif
@@ -928,17 +929,19 @@ void taskMENU_Menu(void *arg)
 	uint32_t bitSet;
 	uint32_t counter;
 
-#if 0
-	/**Send the struct to RTC**/
-	setTimeLCD(*rtcTime);
-#endif
-
 	for(;;)
 	{
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
+
 		menu_Main0();
+		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
+		/**Send the struct to RTC**/
+		setTimeLCD(*rtcTime);
+	xSemaphoreGive(g_MUTEXTEST);
 #if 0
+		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		printTimeLCD(*rtcTime);
+		xSemaphoreGive(g_MUTEXTEST);
 #endif
 		for(counter = 0; counter < numberMAX_STRING; counter++)
 		{

@@ -41,53 +41,48 @@
 
 volatile bool g_MasterCompletionFlag = false;
 i2c_master_handle_t g_m_handle;
-SemaphoreHandle_t i2cSemaphore;
-SemaphoreHandle_t i2cMutex;
 
 static void i2c_master_callback(I2C_Type *base, i2c_master_handle_t *handle,
         status_t status, void * userData)
 {
-
+	//PRINTF("SUCCESS\n");
 	if (status == kStatus_Success)
 	{
 		g_MasterCompletionFlag = true;
-		xSemaphoreGive(i2cSemaphore);
 
 	}
-
 }
+
 void I2Cinit()
 {
 	CLOCK_EnableClock(kCLOCK_PortB);
 	CLOCK_EnableClock(kCLOCK_I2c0);
 
 	port_pin_config_t config_i2c =
-		{ kPORT_PullUp, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
+	{ kPORT_PullUp, kPORT_SlowSlewRate, kPORT_PassiveFilterDisable,
 		        kPORT_OpenDrainEnable, kPORT_LowDriveStrength, kPORT_MuxAlt2,
-		        kPORT_UnlockRegister, };
+		        kPORT_UnlockRegister,
+	};
 
-		PORT_SetPinConfig(PORTB, 2, &config_i2c);
-		PORT_SetPinConfig(PORTB, 3, &config_i2c);
+	PORT_SetPinConfig(PORTB, 2, &config_i2c);
+	PORT_SetPinConfig(PORTB, 3, &config_i2c);
+
 	i2c_master_config_t masterConfig;
+
 	I2C_MasterGetDefaultConfig(&masterConfig);
 	masterConfig.baudRate_Bps = 100000;
 	I2C_MasterInit(I2C0, &masterConfig, CLOCK_GetFreq(kCLOCK_BusClk));
-	i2cSemaphore = xSemaphoreCreateBinary();
-	i2cMutex = xSemaphoreCreateMutex();
 }
 /*
  * EEPROM 24LC256 FUNCTIONS
  */
 void writeMemory(uint16_t add,uint8_t data)
 {
-
-	i2c_master_config_t masterConfig;
 	i2c_master_transfer_t masterXfer;
 
 	I2C_MasterTransferCreateHandle(I2C0, &g_m_handle,i2c_master_callback, NULL);
 
 	uint8_t datah = data;
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
 
 	masterXfer.slaveAddress = EEPROMADDRESS;
 	masterXfer.direction = kI2C_Write;
@@ -106,9 +101,6 @@ void writeMemory(uint16_t add,uint8_t data)
 	}
 	g_MasterCompletionFlag = false;
 	I2Cwritedelay();
-
-	xSemaphoreGive(i2cMutex);
-
 }
 
 
@@ -120,7 +112,6 @@ uint8_t readMemory(uint16_t add)
 	I2C_MasterTransferCreateHandle(I2C0, &g_m_handle,i2c_master_callback, NULL);
 
 	uint8_t data_buffer;
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
 
 	masterXfer.slaveAddress = EEPROMADDRESS;
 	masterXfer.direction = kI2C_Read;
@@ -135,10 +126,9 @@ uint8_t readMemory(uint16_t add)
 
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
+	I2Cwritedelay();
 
 	return data_buffer;
-
 }
 /*
  *
@@ -154,7 +144,6 @@ uint8_t readRTC_sec()
 
 	uint8_t seconds;
 	uint8_t secondsadd = SECONDSADDRESS;
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
@@ -168,14 +157,13 @@ uint8_t readRTC_sec()
 	while (!g_MasterCompletionFlag)
 	{
 		for(uint32_t i = 480000000;i==0;i--)
-			{
-			}
+		{
+		}
 		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
-
-	xSemaphoreGive(i2cMutex);
+	I2Cwritedelay();
 
 	return seconds;
 }
@@ -190,8 +178,6 @@ uint8_t readRTC_min()
 	uint8_t minutes;
 	uint8_t minutesadd = MINUTESADDRESS;
 
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
 	masterXfer.subaddress = minutesadd;
@@ -203,14 +189,14 @@ uint8_t readRTC_min()
 	I2C_MasterTransferNonBlocking(I2C0,  &g_m_handle,&masterXfer);
 	while (!g_MasterCompletionFlag){
 		for(uint32_t i = 480000000;i==0;i--)
-			{
-			}
+		{
+		}
 		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
+	I2Cwritedelay();
 
-	xSemaphoreGive(i2cMutex);
 	return minutes;
 
 }
@@ -224,8 +210,6 @@ uint8_t readRTC_hour()
 	uint8_t hours;
 	uint8_t hoursadd = HOURSADDRESS;
 
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
 	masterXfer.subaddress = hoursadd;
@@ -238,17 +222,15 @@ uint8_t readRTC_hour()
 
 	while (!g_MasterCompletionFlag){
 		for(uint32_t i = 480000000;i==0;i--)
-			{
-			}
+		{
+		}
 		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
-
-	xSemaphoreGive(i2cMutex);
+	I2Cwritedelay();
 
 	return hours;
-
 }
 
 uint8_t readRTC_day()
@@ -259,9 +241,6 @@ uint8_t readRTC_day()
 
 	uint8_t days;
 	uint8_t daysadd = DAYADDRESS;
-
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
@@ -275,16 +254,15 @@ uint8_t readRTC_day()
 
 	while (!g_MasterCompletionFlag){
 		for(uint32_t i = 480000000;i==0;i--)
-			{
-			}
+		{
+		}
 		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
+	I2Cwritedelay();
 
 	return days;
-
 }
 
 uint8_t readRTC_month()
@@ -295,9 +273,6 @@ uint8_t readRTC_month()
 
 	uint8_t months;
 	uint8_t monthsadd = MONTHADDRESS;
-
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
@@ -311,52 +286,42 @@ uint8_t readRTC_month()
 
 	while (!g_MasterCompletionFlag){
 		for(uint32_t i = 480000000;i==0;i--)
-			{
-			}
+		{
+		}
 		g_MasterCompletionFlag=true;
 
 	}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
-
+	I2Cwritedelay();
 	return months;
 }
 
-
-
-
-
 void setRTC_sec(uint8_t sec)
 {
-		if(sec > MAXSECONDS){
-			sec = 0;
-		}
-		uint8_t BCDsec = ((sec/10)<<4) | (sec%10);
+	if(sec > MAXSECONDS){
+		sec = 0;
+	}
+	uint8_t BCDsec = ((sec/10)<<4) | (sec%10);
 
 
-		i2c_master_transfer_t masterXfer;
+	i2c_master_transfer_t masterXfer;
 
-		I2C_MasterTransferCreateHandle(I2C0, &g_m_handle,i2c_master_callback, NULL);
+	I2C_MasterTransferCreateHandle(I2C0, &g_m_handle,i2c_master_callback, NULL);
 
-		uint8_t seconds = BCDsec;
-		xSemaphoreTake(i2cMutex, portMAX_DELAY);
+	uint8_t seconds = BCDsec;
 
-		masterXfer.slaveAddress = RTCADDRESS;
-		masterXfer.direction = kI2C_Write;
-		masterXfer.subaddress = SECONDSADDRESS;
-		masterXfer.subaddressSize = 1;
-		masterXfer.data = &seconds;
-		masterXfer.dataSize = 1;
-		masterXfer.flags = kI2C_TransferDefaultFlag;
+	masterXfer.slaveAddress = RTCADDRESS;
+	masterXfer.direction = kI2C_Write;
+	masterXfer.subaddress = SECONDSADDRESS;
+	masterXfer.subaddressSize = 1;
+	masterXfer.data = &seconds;
+	masterXfer.dataSize = 1;
+	masterXfer.flags = kI2C_TransferDefaultFlag;
 
-
-		I2C_MasterTransferNonBlocking(I2C0, &g_m_handle,&masterXfer);
-		while (!g_MasterCompletionFlag){}
-		g_MasterCompletionFlag = false;
-		I2Cwritedelay();
-
-		xSemaphoreGive(i2cMutex);
-
+	I2C_MasterTransferNonBlocking(I2C0, &g_m_handle,&masterXfer);
+	while (!g_MasterCompletionFlag){}
+	g_MasterCompletionFlag = false;
+	I2Cwritedelay();
 }
 
 
@@ -376,8 +341,6 @@ void setRTC_min(uint8_t min)
 
 	uint8_t minutes;
 	minutes = BCDmin;
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Write;
@@ -391,8 +354,7 @@ void setRTC_min(uint8_t min)
 
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
-
+	I2Cwritedelay();
 
 }
 
@@ -410,8 +372,6 @@ void setRTC_hour(uint8_t hour)
 
 	uint8_t hours = BCDhours;
 
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Write;
 	masterXfer.subaddress = HOURSADDRESS;
@@ -424,8 +384,7 @@ void setRTC_hour(uint8_t hour)
 
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
-
+	I2Cwritedelay();
 
 }
 
@@ -444,8 +403,6 @@ void setRTC_day(uint8_t day)
 
 	uint8_t days = BCDdays;
 
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
-
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Write;
 	masterXfer.subaddress = DAYADDRESS;
@@ -458,9 +415,7 @@ void setRTC_day(uint8_t day)
 
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
-
-	return days;
+	I2Cwritedelay();
 }
 
 void setRTC_month(uint8_t month)
@@ -476,7 +431,6 @@ void setRTC_month(uint8_t month)
 	I2C_MasterTransferCreateHandle(I2C0, &g_m_handle,i2c_master_callback, NULL);
 
 	uint8_t months = BCDmonths;
-	xSemaphoreTake(i2cMutex, portMAX_DELAY);
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Write;
@@ -490,9 +444,8 @@ void setRTC_month(uint8_t month)
 
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	xSemaphoreGive(i2cMutex);
 
-
+	I2Cwritedelay();
 }
 void i2crestart(uint8_t sec,uint8_t min, uint8_t hour, uint8_t day, uint8_t month)
 {
@@ -507,7 +460,7 @@ void i2crestart(uint8_t sec,uint8_t min, uint8_t hour, uint8_t day, uint8_t mont
 
 void I2Cwritedelay()
 {
-	for(uint32_t i = 12000000;i==0;i--)
+	for(uint32_t i = 120000000;i==0;i--)
 	{
 	}
 

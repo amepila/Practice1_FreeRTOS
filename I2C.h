@@ -79,5 +79,6 @@ void setRTC_day(uint8_t day);
 void setRTC_month(uint8_t month);
 
 void i2crestart(uint8_t sec,uint8_t min, uint8_t hour, uint8_t day, uint8_t month);
+void I2Cwritedelay();
 
 #endif /* I2C_H_ */

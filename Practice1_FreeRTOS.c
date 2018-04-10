@@ -33,6 +33,7 @@
  * @brief   Application entry point.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <threads.h>
 #include "board.h"
 #include "peripherals.h"
@@ -49,6 +50,7 @@
 #include "queue.h"
 #include "event_groups.h"
 #include "Menu.h"
+#include "I2C.h"
 
 #define BIT2	(2)
 #define BIT5	(5)
@@ -78,6 +80,7 @@ int main(void)
     init_UART0();
     init_UART1();
     init_SPI0();
+    I2Cinit();
 	LCDNokia_clear();
 
 	/***Enable IRQ's***/
@@ -86,9 +89,9 @@ int main(void)
 	NVIC_SetPriority(PORTC_IRQn,5);
 
 	xTaskCreate(taskINIT, "Task Init", configMINIMAL_STACK_SIZE, NULL, configMAX_PRIORITIES-2, NULL);
-	//vTaskStartScheduler();
-	menu_Main1();
-    for(;;)
+	vTaskStartScheduler();
+
+	for(;;)
     {
 	}
     return 0 ;
