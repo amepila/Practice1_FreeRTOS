@@ -39,6 +39,10 @@
 #define MAXDAYS     (31)
 #define MAXMONTHS     (12)
 
+extern SemaphoreHandle_t g_MUTEXTEST1;
+extern SemaphoreHandle_t g_MUTEXTEST2;
+extern SemaphoreHandle_t g_MUTEXTEST3;
+
 volatile bool g_MasterCompletionFlag = false;
 i2c_master_handle_t g_m_handle;
 
@@ -144,7 +148,9 @@ uint8_t readRTC_sec()
 
 	uint8_t seconds;
 	uint8_t secondsadd = SECONDSADDRESS;
+	seconds = 0;
 
+	xSemaphoreTake(g_MUTEXTEST1,portMAX_DELAY);
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
 	masterXfer.subaddress = secondsadd;
@@ -159,6 +165,7 @@ uint8_t readRTC_sec()
 	}
 	g_MasterCompletionFlag = false;
 	I2Cwritedelay();
+	xSemaphoreGive(g_MUTEXTEST1);
 
 	return seconds;
 }
@@ -173,6 +180,8 @@ uint8_t readRTC_min()
 	uint8_t minutes;
 	uint8_t minutesadd = MINUTESADDRESS;
 
+	xSemaphoreTake(g_MUTEXTEST2,portMAX_DELAY);
+
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
 	masterXfer.subaddress = minutesadd;
@@ -186,7 +195,8 @@ uint8_t readRTC_min()
 	{
 	}
 	g_MasterCompletionFlag = false;
-	I2Cwritedelay();
+	//I2Cwritedelay();
+	xSemaphoreGive(g_MUTEXTEST2);
 
 	return minutes;
 
@@ -200,6 +210,7 @@ uint8_t readRTC_hour()
 
 	uint8_t hours;
 	uint8_t hoursadd = HOURSADDRESS;
+	xSemaphoreTake(g_MUTEXTEST3,portMAX_DELAY);
 
 	masterXfer.slaveAddress = RTCADDRESS;
 	masterXfer.direction = kI2C_Read;
@@ -216,7 +227,8 @@ uint8_t readRTC_hour()
 
 	}
 	g_MasterCompletionFlag = false;
-	I2Cwritedelay();
+	//I2Cwritedelay();
+	xSemaphoreGive(g_MUTEXTEST3);
 
 	return hours;
 }
@@ -244,7 +256,7 @@ uint8_t readRTC_day()
 
 	}
 	g_MasterCompletionFlag = false;
-	I2Cwritedelay();
+	//I2Cwritedelay();
 
 	return days;
 }
@@ -272,7 +284,7 @@ uint8_t readRTC_month()
 
 	}
 	g_MasterCompletionFlag = false;
-	I2Cwritedelay();
+	//I2Cwritedelay();
 	return months;
 }
 
@@ -301,7 +313,7 @@ void setRTC_sec(uint8_t sec)
 	I2C_MasterTransferNonBlocking(I2C0, &g_m_handle,&masterXfer);
 	while (!g_MasterCompletionFlag){}
 	g_MasterCompletionFlag = false;
-	I2Cwritedelay();
+	//I2Cwritedelay();
 }
 
 

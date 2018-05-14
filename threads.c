@@ -58,6 +58,8 @@
 #define EVENT_TERMINAL1			(1<<0)
 #define EVENT_TERMINAL2			(1<<1)
 
+#define EVENT_INIT_UART0		(1<<0)
+#define EVENT_INIT_UART1		(1<<1)
 #define EVENT_RI2C_UART0		(1<<0)
 #define EVENT_RI2C_UART1		(1<<1)
 #define EVENT_WI2C_UART0		(1<<0)
@@ -94,7 +96,9 @@ SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_ReadDate;
 SemaphoreHandle_t g_semaphore_Terminal2;
 SemaphoreHandle_t g_semaphore_Eco;
-SemaphoreHandle_t g_MUTEXTEST;
+SemaphoreHandle_t g_MUTEXTEST1;
+SemaphoreHandle_t g_MUTEXTEST2;
+SemaphoreHandle_t g_MUTEXTEST3;
 
 EventGroupHandle_t g_event_Init;
 EventGroupHandle_t g_event_ReadI2C;
@@ -149,7 +153,7 @@ typedef struct
 /**Structure with the time*/
 Time_Type g_Time =
 {
-		{1, 0, 0, FORMAT_24H, NON_PERIOD},
+		{11, 0, 0, FORMAT_24H, NON_PERIOD},
 		{2018, 3, 28},
 		1,
 		1
@@ -314,12 +318,15 @@ void taskINIT(void *arg)
 	g_semaphore_ReadDate = xSemaphoreCreateBinary();
 	g_semaphore_Terminal2 = xSemaphoreCreateBinary();
 	g_semaphore_Eco = xSemaphoreCreateBinary();
-	g_MUTEXTEST = xSemaphoreCreateMutex();
+	g_MUTEXTEST1 = xSemaphoreCreateMutex();
+	g_MUTEXTEST2 = xSemaphoreCreateMutex();
+	g_MUTEXTEST3 = xSemaphoreCreateMutex();
+
 
 /**********************************QUEUES*****************************************/
 
 /**********************************EVENTS*****************************************/
-#if 1
+#if 0
 	g_event_Init = xEventGroupCreate();
 	g_event_ReadI2C = xEventGroupCreate();
 	g_event_WriteI2C = xEventGroupCreate();
@@ -654,6 +661,8 @@ void taskSETHOUR_SetTime(void *arg)
 		realTime.modifyTime = pdTRUE;
 
 		setTimeLCD(realTime);
+		time = getTime();
+
 
 		/**Update the time structure*/
 		rtcTime->hour = realTime.hour;
@@ -953,12 +962,14 @@ void taskMENU_Menu(void *arg)
 	uint32_t bitSet;
 	uint32_t counter;
 
+	setTimeLCD(*rtcTime);
+
 	for(;;)
 	{
 		xSemaphoreTake(g_semaphore_Init, portMAX_DELAY);
 
 		menu_Main0();
-		setTimeLCD(*rtcTime);
+
 #if 0
 		xSemaphoreTake(g_MUTEXTEST, portMAX_DELAY);
 		printTimeLCD(*rtcTime);
@@ -986,7 +997,6 @@ void taskMENU_Menu(void *arg)
 		xEventGroupSetBits(g_eventsMenus, bitSet);
 	}
 }
-
 
 void taskMENU_Read(void *arg)
 {

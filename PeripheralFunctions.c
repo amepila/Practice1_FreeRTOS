@@ -168,6 +168,7 @@ Time_Type getTime(void)
 	hour2 = readRTC_hour();
 	min1 = readRTC_min();
 	min2 = readRTC_min();
+
 	sec1 = readRTC_sec();
 	sec2 = readRTC_sec();
 
